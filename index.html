@@ -13,7 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
-  <!-- Html5Qrcode (สำหรับวิเคราะห์ QR ผ่านกล้อง/รูปภาพได้บน Safari และ Chrome) -->
+  <!-- Html5Qrcode (สำหรับประมวลผล QR-Code ได้บน Safari และ Chrome) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <script>
@@ -48,7 +48,7 @@
 
   <script>
     // *** สำคัญมาก: กรุณานำ URL Web App ที่ได้จาก Google Apps Script มาใส่ตรงนี้ ***
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycby51yQj8VkJSv4O-_kWn4qhmhY7-J3sJk9Sgez7ZKgjUa1Ivj9d2oRUS9VDHMvSfgY-/exec";
+    const BACKEND_URL = "https://script.google.com/macros/s/xxxx/exec";
   </script>
 
   <!-- Navigation bar -->
@@ -60,14 +60,15 @@
         </div>
         <div>
           <h1 class="font-bold text-base md:text-lg leading-tight text-primary">ระบบเลือกตั้งประธานนักเรียน</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400">REST API & Vercel Platform</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">ระบบแสกนสิทธิ์ QR-Code ถือคะแนนเสียง 100%</p>
         </div>
       </div>
       
       <div class="flex items-center space-x-3">
-        <button onclick="openQRScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center space-x-1 shadow-sm transition">
-          <span class="material-icons text-sm">qr_code_scanner</span>
-          <span>สแกน QR-Code (สำหรับครู)</span>
+        <!-- ปุ่มเปิดสแกนบันทึกสถานะผู้ขาดเรียน (สำหรับคุณครู) -->
+        <button onclick="openTeacherQRScanner()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center space-x-1 shadow-sm transition">
+          <span class="material-icons text-sm">assignment_late</span>
+          <span>ครูบันทึกสถานะขาดเรียน</span>
         </button>
         <button onclick="toggleDarkMode()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition">
           <span id="dark-mode-icon" class="material-icons text-sm block">dark_mode</span>
@@ -118,7 +119,7 @@
       </div>
     </div>
 
-    <!-- ปุ่มสำหรับกดเข้าสู่การใช้สิทธิ์ของนักเรียน -->
+    <!-- แผงหลักสำหรับปุ่มโหวตด้วยการแสกนคิวอาร์โค้ด -->
     <div id="action-panel" class="bg-white dark:bg-gray-800 border-2 border-primary/20 rounded-3xl p-10 text-center max-w-2xl mx-auto custom-shadow relative overflow-hidden my-8">
       <div class="absolute -top-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
       <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
@@ -128,14 +129,14 @@
           ลงคะแนนเสียงประธานนักเรียนออนไลน์
         </h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-          โปรดตรวจสอบความพร้อมและยืนยันรหัสประจำตัวของท่านผ่านทางบัตรคิวสิทธิ์เพื่อดำเนินการลงคะแนนเสียง
+          สแกนสิทธิ์ QR-Code ประจำตัวเพื่อแสดงตัวตน ดึงข้อมูล และดำเนินการโหวตลงสิทธิ์ทันที
         </p>
         
         <div class="pt-4 pb-2">
-          <button onclick="openLoginModal()" class="voting-btn-glow relative inline-flex items-center justify-center p-0.5 mb-2 overflow-hidden text-lg font-bold text-white rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 transform hover:scale-[1.05] transition-all duration-300 shadow-2xl shadow-blue-500/40">
+          <button onclick="openVoterQRScanner()" class="voting-btn-glow relative inline-flex items-center justify-center p-0.5 mb-2 overflow-hidden text-lg font-bold text-white rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 transform hover:scale-[1.05] transition-all duration-300 shadow-2xl shadow-blue-500/40">
             <span class="relative px-12 py-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center space-x-3 text-xl md:text-2xl">
-              <span class="material-icons text-2xl md:text-3xl">how_to_vote</span>
-              <span>กดเพื่อเข้าสู่ระบบลงคะแนน</span>
+              <span class="material-icons text-2xl md:text-3xl animate-pulse">qr_code_scanner</span>
+              <span>แตะเพื่อสแกน QR-Code ลงคะแนน</span>
             </span>
           </button>
         </div>
@@ -182,7 +183,7 @@
       </div>
     </div>
 
-    <!-- เมนูของคุณครูสำหรับจัดพิมพ์สิทธิ์ และ Reset ข้อมูล -->
+    <!-- เมนูของคุณครู -->
     <div class="flex flex-wrap gap-2 justify-between items-center bg-gray-100 dark:bg-gray-800/40 p-4 rounded-2xl">
       <div class="flex items-center space-x-1 text-xs text-gray-500">
         <span class="material-icons text-sm">settings</span>
@@ -206,66 +207,87 @@
 
   </main>
 
-  <!-- Modal สำหรับสแกน QR-Code ด้วยกล้องถ่ายรูปมือถือ/แท็บเล็ต -->
-  <div id="qr-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+  <!-- Modal สำหรับสแกน QR-Code เพื่อเข้าลงคะแนนสิทธิ์ของนักเรียน -->
+  <div id="voter-scan-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/80 backdrop-blur-sm">
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full custom-shadow border border-gray-100 relative">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-base font-bold flex items-center text-emerald-600">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-base font-bold flex items-center text-primary">
             <span class="material-icons mr-1">qr_code_scanner</span>
-            สแกนตรวจสอบสิทธิ์ (Safari & Chrome)
+            สแกนสิทธิ์ลงคะแนนของนักเรียน
           </h2>
-          <button onclick="closeQRScanner()" class="text-gray-400 hover:text-gray-600">
+          <button onclick="closeVoterQRScanner()" class="text-gray-400 hover:text-gray-600">
             <span class="material-icons">close</span>
           </button>
         </div>
         
-        <p class="text-xs text-gray-500 mb-4">ระบบรองรับการเปิดกล้อง หากไม่สามารถเข้าถึงกล้องได้ ให้กดเลือกเมนูอัปโหลดภาพแทน</p>
+        <p class="text-xs text-gray-500 mb-4">ส่อง QR-code สิทธิ์ประจำตัวของท่าน หรืออัปโหลดไฟล์ภาพ หรือใช้การคีย์ข้อมูลรหัสผ่านด้านล่างหากกล้องทำงานไม่ได้</p>
         
-        <!-- ขอบเขตแสดงกล้องวิดีโอ -->
+        <!-- จอภาพของกล้องแสกนสด -->
         <div class="overflow-hidden rounded-2xl bg-black aspect-square max-w-xs mx-auto mb-4 border-2 border-primary relative">
-          <div id="qr-reader" class="w-full h-full"></div>
+          <div id="voter-qr-reader" class="w-full h-full"></div>
         </div>
         
-        <!-- ส่วนอัปโหลดรูปภาพทางเลือก (Fallback) เมื่อเปิดกล้องจริงไม่ได้ -->
-        <div class="mt-4 mb-2">
-          <label class="w-full bg-emerald-50 text-emerald-700 border border-emerald-300 rounded-xl py-3 px-4 flex items-center justify-center space-x-2 cursor-pointer font-bold hover:bg-emerald-100 transition text-sm">
-            <span class="material-icons text-lg">add_a_photo</span>
+        <!-- ระบบFallback 1: แสกนผ่านการนำเข้ารูปภาพ -->
+        <div class="mb-4">
+          <label class="w-full bg-blue-50 text-blue-700 border border-blue-200 rounded-xl py-2.5 px-4 flex items-center justify-center space-x-2 cursor-pointer font-bold hover:bg-blue-100 transition text-xs">
+            <span class="material-icons text-sm">add_a_photo</span>
             <span>ถ่ายภาพ หรือ อัปโหลดภาพ QR-code</span>
-            <input type="file" id="qr-file-input" accept="image/*" class="hidden" onchange="scanFromUploadedFile(this)">
+            <input type="file" id="voter-qr-file" accept="image/*" class="hidden" onchange="scanVoterQRFromFile(this)">
           </label>
         </div>
 
-        <div class="text-center text-xs text-rose-500 font-semibold mt-2" id="qr-scan-result">
+        <hr class="border-gray-100 dark:border-gray-700 my-3" />
+
+        <!-- ระบบFallback 2: คีย์รหัสประจำตัวโดยตรง -->
+        <div class="space-y-2">
+          <label class="block text-center text-xs font-semibold text-gray-400 uppercase">มีปัญหาในการสแกน? กรอกรหัสลงคะแนนโดยตรง</label>
+          <div class="flex space-x-2">
+            <input id="voter-manual-id" type="text" placeholder="ตัวอย่าง: STD001" class="flex-1 px-4 py-2 text-sm rounded-xl border outline-none text-center font-bold uppercase dark:bg-gray-700">
+            <button onclick="handleManualLoginSubmit()" class="bg-primary hover:bg-primary-dark text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+              ยืนยันรหัส
+            </button>
+          </div>
+        </div>
+
+        <div class="text-center text-xs text-rose-500 font-semibold mt-3" id="voter-scan-status">
           กำลังรอสัญญาณภาพ...
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal สำหรับตรวจสอบสิทธิ์นักเรียน -->
-  <div id="login-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
-    <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/60 backdrop-blur-sm">
-      <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full border border-gray-100">
-        <div class="flex justify-between items-start mb-6">
-          <h2 class="text-base font-bold flex items-center text-primary">
-            <span class="material-icons mr-2">verified_user</span>
-            ยืนยันสิทธิ์นักเรียนเพื่อเข้าโหวต
+  <!-- Modal สำหรับแสกนบันทึกสถานะผู้ขาดเรียน (สำหรับคุณครู) -->
+  <div id="teacher-scan-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+    <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/80 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full custom-shadow border border-gray-100 relative">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-base font-bold flex items-center text-amber-600">
+            <span class="material-icons mr-1">assignment_late</span>
+            ระบบเช็กชื่อผู้ขาดเรียน (ครูผู้ดูแล)
           </h2>
-          <button onclick="closeLoginModal()" class="text-gray-400 hover:text-gray-600">
+          <button onclick="closeTeacherQRScanner()" class="text-gray-400 hover:text-gray-600">
             <span class="material-icons">close</span>
           </button>
         </div>
         
-        <form onsubmit="handleLogin(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-gray-500 uppercase">รหัสประจำตัวนักเรียน</label>
-            <input id="student-id-input" type="text" required placeholder="ตัวอย่าง: STD001" class="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-center text-lg font-semibold uppercase dark:bg-gray-700">
-          </div>
-          <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition">
-            เข้าสู่หน้าบัตรลงคะแนน
-          </button>
-        </form>
+        <p class="text-xs text-gray-500 mb-4">แสกนรหัส QR-code รายชื่อของนักเรียนที่ไม่มาในวันนี้เพื่อทำการลงบันทึกสถานะ</p>
+        
+        <div class="overflow-hidden rounded-2xl bg-black aspect-square max-w-xs mx-auto mb-4 border-2 border-amber-500 relative">
+          <div id="teacher-qr-reader" class="w-full h-full"></div>
+        </div>
+
+        <div class="mb-4">
+          <label class="w-full bg-amber-50 text-amber-700 border border-amber-200 rounded-xl py-2.5 px-4 flex items-center justify-center space-x-2 cursor-pointer font-bold hover:bg-amber-100 transition text-xs">
+            <span class="material-icons text-sm">add_a_photo</span>
+            <span>ถ่ายภาพ หรือ อัปโหลดภาพ QR-code</span>
+            <input type="file" id="teacher-qr-file" accept="image/*" class="hidden" onchange="scanTeacherQRFromFile(this)">
+          </label>
+        </div>
+
+        <div class="text-center text-xs text-rose-500 font-semibold mt-2" id="teacher-scan-status">
+          กำลังรอสัญญาณภาพ...
+        </div>
       </div>
     </div>
   </div>
@@ -307,7 +329,10 @@
     let pieChart = null;
     let lineChart = null;
     let currentUserSession = null;
-    let html5QrcodeScanner = null;
+    
+    // แยกสแกนเนอร์เป็น 2 ตัวเพื่อความชัดเจน
+    let voterScanner = null;
+    let teacherScanner = null;
 
     function toggleDarkMode() {
       const html = document.documentElement;
@@ -327,7 +352,6 @@
       document.documentElement.classList.add('dark');
     }
 
-    // ฟังก์ชันสื่อสารด้วยการ Fetch ไปยังหลังบ้าน (แทน google.script.run)
     async function apiFetch(url, params = {}) {
       try {
         const response = await fetch(url, params);
@@ -338,12 +362,11 @@
       }
     }
 
-    // ดึงข้อมูลหลักจากหลังบ้านมาประมวลผล
     function fetchDashboardData() {
       apiFetch(`${BACKEND_URL}?action=getDashboardData`)
         .then(data => {
           if (!data || !data.success) {
-            Swal.fire('การกำหนดค่าไม่ถูกต้อง', data.error || 'กรุณาตรวจสอบ URL หรือสิทธิ์การเข้าใช้งานชีต', 'error');
+            Swal.fire('การกำหนดค่าไม่ถูกต้อง', data.error || 'กรุณาตรวจสอบสิทธิ์', 'error');
             return;
           }
           currentData = data;
@@ -358,7 +381,7 @@
           }
         })
         .catch(err => {
-          Swal.fire('ข้อผิดพลาดการเชื่อมต่อ', 'ไม่สามารถเชื่อมต่อหลังบ้านได้ กรุณาตรวจสอบ CORS / ลิงก์ API', 'error');
+          Swal.fire('ข้อผิดพลาดการเชื่อมต่อ', 'ไม่สามารถเชื่อมต่อหลังบ้านได้', 'error');
         });
     }
 
@@ -395,93 +418,217 @@
       }
     }
 
-    // เปิดระบบสแกน QR Code พร้อมตรวจสอบ Permission
-    async function openQRScanner() {
-      document.getElementById('qr-modal').classList.remove('hidden');
-      document.getElementById('qr-scan-result').innerText = "กำลังสแกนกล้องสด...";
+    // --- ส่วนบริการลงสิทธิ์ของนักเรียนผ่าน QR-Code (Voter Workflow) ---
+
+    async function openVoterQRScanner() {
+      document.getElementById('voter-scan-modal').classList.remove('hidden');
+      document.getElementById('voter-scan-status').innerText = "กำลังเข้าถึงกล้องสแกนเพื่ออ่านข้อมูล...";
       
       try {
-        // ตรวจสอบสิทธิ์การเข้าใช้งานกล้อง (Camera Permission check)
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop()); // ปิดสตรีมทดสอบเพื่อคืนทรัพยากรระบบ
+        stream.getTracks().forEach(track => track.stop());
 
-        html5QrcodeScanner = new Html5Qrcode("qr-reader");
-        html5QrcodeScanner.start(
+        voterScanner = new Html5Qrcode("voter-qr-reader");
+        voterScanner.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: 220 },
-          onScanSuccess,
-          onScanFailure
-        ).catch(err => {
-          showCameraFallbackMessage();
+          onVoterScanSuccess,
+          onVoterScanFailure
+        ).catch(() => {
+          showVoterFallbackMessage();
         });
       } catch (err) {
-        showCameraFallbackMessage();
+        showVoterFallbackMessage();
       }
     }
 
-    function showCameraFallbackMessage() {
-      document.getElementById('qr-scan-result').innerHTML = 
-        "<span class='text-amber-600 font-semibold'>เบราว์เซอร์ไม่สามารถเริ่มทำงานระบบกล้องได้<br>โปรดแตะปุ่มเพื่ออัปโหลดไฟล์ภาพแทน</span>";
+    function showVoterFallbackMessage() {
+      document.getElementById('voter-scan-status').innerHTML = 
+        "<span class='text-amber-600 font-semibold'>ไม่สามารถเริ่มทำงานระบบกล้องได้<br>โปรดอัปโหลดไฟล์ หรือ ใช้การกรอกเลขรหัสแทน</span>";
     }
 
-    function closeQRScanner() {
-      document.getElementById('qr-modal').classList.add('hidden');
-      document.getElementById('qr-file-input').value = "";
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.stop().then(() => {
-          html5QrcodeScanner = null;
+    function closeVoterQRScanner() {
+      document.getElementById('voter-scan-modal').classList.add('hidden');
+      document.getElementById('voter-qr-file').value = "";
+      document.getElementById('voter-manual-id').value = "";
+      if (voterScanner) {
+        voterScanner.stop().then(() => {
+          voterScanner = null;
         }).catch(err => console.error(err));
       }
     }
 
-    // การแสกนผ่านการนำเข้ารูปภาพ (Fallback)
-    function scanFromUploadedFile(input) {
+    function scanVoterQRFromFile(input) {
       if (input.files && input.files[0]) {
         const file = input.files[0];
-        document.getElementById('qr-scan-result').innerText = "กำลังวิเคราะห์โครงสร้างพิกเซลในรูปภาพ...";
+        document.getElementById('voter-scan-status').innerText = "กำลังวิเคราะห์โครงสร้างพิกเซลในรูปภาพ...";
         
-        const tempScanner = new Html5Qrcode("qr-reader");
+        const tempScanner = new Html5Qrcode("voter-qr-reader");
         tempScanner.scanFile(file, true)
           .then(decodedText => {
-            onScanSuccess(decodedText, null);
+            onVoterScanSuccess(decodedText);
           })
-          .catch(err => {
-            Swal.fire('ไม่สำเร็จ', 'ไม่พบโค้ดในรูปภาพ กรุณาตรวจสอบว่าความละเอียดภาพชัดเจนเพียงพอ', 'error');
-            document.getElementById('qr-scan-result').innerText = "ล้มเหลว: ถ่ายภาพไม่ชัดเจน";
+          .catch(() => {
+            Swal.fire('ตรวจจับล้มเหลว', 'ไม่พบ QR Code ในรูปภาพ กรุณาถ่ายภาพใหม่อีกครั้งให้ชัดขึ้น', 'error');
+            document.getElementById('voter-scan-status').innerText = "ล้มเหลว: ภาพไม่ชัด";
           });
       }
     }
 
-    function onScanSuccess(decodedText, decodedResult) {
-      closeQRScanner();
+    function handleManualLoginSubmit() {
+      const studentId = document.getElementById('voter-manual-id').value.trim();
+      if (!studentId) {
+        Swal.fire('คำเตือน', 'กรุณาระบุรหัสประจำตัวของท่าน', 'warning');
+        return;
+      }
+      processVoterAuthentication(studentId);
+    }
+
+    function onVoterScanSuccess(decodedText) {
+      closeVoterQRScanner();
+      const studentId = decodedText.trim();
+      processVoterAuthentication(studentId);
+    }
+
+    function onVoterScanFailure() {
+      // ข้าม Log การรันแอดมินสตรีมกล้อง
+    }
+
+    // ฟังก์ชันประมวลผลการยืนยันตัวตน (ไม่ต้องกรอกเลขบัตร มี popup แสดงรายชื่อ)
+    function processVoterAuthentication(studentId) {
+      Swal.fire({ title: 'กำลังยืนยันข้อมูลรายชื่อ...', didOpen: () => { Swal.showLoading(); } });
+
+      apiFetch(BACKEND_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: "authenticateUser",
+          studentId: studentId
+        })
+      }).then(response => {
+        Swal.close();
+        if (response.success) {
+          if (response.hasVoted) {
+            Swal.fire('ทำรายการแล้ว', 'รหัสประจำตัวนี้นักเรียนได้รับการประมวลสิทธิ์โหวตสำเร็จเรียบร้อยแล้ว', 'warning');
+          } else {
+            // ดึงรายชื่อขึ้นจอให้กดยอมรับ "ตกลง" เพื่อเข้าบัตรเลือกตั้ง
+            Swal.fire({
+              title: 'ยืนยันแสดงตนผู้ใช้สิทธิ์',
+              html: `
+                <div class="text-left bg-gray-50 p-4 rounded-xl space-y-2 text-sm">
+                  <p><strong>ชื่อ-นามสกุล:</strong> ${response.name}</p>
+                  <p><strong>ชั้นเรียน:</strong> ${response.className}</p>
+                  <p><strong>รหัสประจำตัว:</strong> ${response.studentId}</p>
+                </div>
+                <p class="text-xs text-rose-500 mt-3 font-semibold">* ตรวจสอบว่านี่คือข้อมูลของท่านก่อนกดยืนยัน</p>
+              `,
+              icon: 'question',
+              showCancelButton: true,
+              confirmButtonColor: '#1E88E5',
+              confirmButtonText: 'ตกลง (เข้าสู่บัตรลงคะแนน)',
+              cancelButtonText: 'ไม่ใช่ตัวฉัน (ยกเลิก)'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                currentUserSession = response;
+                openVotingInterface(response);
+              }
+            });
+          }
+        } else {
+          Swal.fire('ปฏิเสธสิทธิ์เข้าใช้', response.message, 'error');
+        }
+      }).catch(() => {
+        Swal.close();
+        Swal.fire('ระบบขัดข้อง', 'การประสานข้อมูลล้มเหลว', 'error');
+      });
+    }
+
+
+    // --- ส่วนบันทึกประวัติการขาดเรียนโดยคุณครู (Teacher Workflow) ---
+
+    async function openTeacherQRScanner() {
+      document.getElementById('teacher-scan-modal').classList.remove('hidden');
+      document.getElementById('teacher-scan-status').innerText = "กำลังเปิดทำงานระบบกล้อง...";
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop());
+
+        teacherScanner = new Html5Qrcode("teacher-qr-reader");
+        teacherScanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 220 },
+          onTeacherScanSuccess,
+          onTeacherScanFailure
+        ).catch(() => {
+          showTeacherFallbackMessage();
+        });
+      } catch (err) {
+        showTeacherFallbackMessage();
+      }
+    }
+
+    function showTeacherFallbackMessage() {
+      document.getElementById('teacher-scan-status').innerHTML = 
+        "<span class='text-amber-600 font-semibold'>ไม่สามารถเริ่มทำงานระบบกล้องได้<br>โปรดแตะเพื่อถ่ายรูปบันทึกแทน</span>";
+    }
+
+    function closeTeacherQRScanner() {
+      document.getElementById('teacher-scan-modal').classList.add('hidden');
+      document.getElementById('teacher-qr-file').value = "";
+      if (teacherScanner) {
+        teacherScanner.stop().then(() => {
+          teacherScanner = null;
+        }).catch(err => console.error(err));
+      }
+    }
+
+    function scanTeacherQRFromFile(input) {
+      if (input.files && input.files[0]) {
+        const file = input.files[0];
+        document.getElementById('teacher-scan-status').innerText = "กำลังวิเคราะห์ไฟล์รูปภาพ...";
+        
+        const tempScanner = new Html5Qrcode("teacher-qr-reader");
+        tempScanner.scanFile(file, true)
+          .then(decodedText => {
+            onTeacherScanSuccess(decodedText);
+          })
+          .catch(() => {
+            Swal.fire('ตรวจจับล้มเหลว', 'ไม่พบ QR Code ในไฟล์รูปภาพ', 'error');
+            document.getElementById('teacher-scan-status').innerText = "ล้มเหลว: ภาพไม่ชัด";
+          });
+      }
+    }
+
+    function onTeacherScanSuccess(decodedText) {
+      closeTeacherQRScanner();
       const studentId = decodedText.trim();
       
       Swal.fire({
-        title: 'ระบบตรวจสอบข้อมูลสิทธิ์',
-        text: `รหัสประจำตัวที่ตรวจพบ: ${studentId}`,
-        icon: 'info',
+        title: 'ครูประมวลผลกรณีไม่มาใช้สิทธิ์',
+        text: `รหัสประจำตัวนักเรียน: ${studentId}`,
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#1E88E5',
-        confirmButtonText: 'บันทึก: ไม่มาใช้สิทธิ์ (ขาดเรียน)',
+        confirmButtonColor: '#E65100',
+        confirmButtonText: 'ระบุเหตุผลไม่มาใช้สิทธิ์ (ขาดเรียน)',
         cancelButtonText: 'ยกเลิก'
       }).then((result) => {
         if (result.isConfirmed) {
           Swal.fire({
-            title: 'ระบุสาเหตุการขาดเรียน',
+            title: 'ระบุเหตุผลในการไม่ใช้สิทธิ์',
             input: 'text',
             inputPlaceholder: 'ตัวอย่าง: ลาป่วย, ขาดเรียน, ไปกิจกรรมภายนอก',
             showCancelButton: true,
-            confirmButtonText: 'ยืนยันการบันทึก',
+            confirmButtonText: 'ยืนยัน',
             cancelButtonText: 'ยกเลิก',
             preConfirm: (value) => {
               if (!value) {
-                Swal.showValidationMessage('จำเป็นต้องใส่ข้อมูลรายละเอียดเพื่อลงบันทึก');
+                Swal.showValidationMessage('กรุณาระบุรายละเอียดให้เรียบร้อย');
               }
               return value;
             }
           }).then((inputRes) => {
             if (inputRes.isConfirmed) {
-              Swal.fire({ title: 'กำลังบันทึกข้อมูล...', didOpen: () => { Swal.showLoading(); } });
+              Swal.fire({ title: 'กำลังปรับข้อมูล...', didOpen: () => { Swal.showLoading(); } });
               
               apiFetch(BACKEND_URL, {
                 method: 'POST',
@@ -493,14 +640,11 @@
               }).then(response => {
                 Swal.close();
                 if (response.success) {
-                  Swal.fire('บันทึกสำเร็จ', `ปรับปรุงสถานะของนักเรียนเรียบร้อยแล้ว`, 'success');
+                  Swal.fire('ทำรายการสำเร็จ', `บันทึกข้อมูลของนักเรียนคนดังกล่าวเรียบร้อยแล้ว`, 'success');
                   fetchDashboardData();
                 } else {
                   Swal.fire('ล้มเหลว', response.message, 'error');
                 }
-              }).catch(err => {
-                Swal.close();
-                Swal.fire('ระบบขัดข้อง', 'ไม่สามารถเชื่อมต่อเครือข่ายได้', 'error');
               });
             }
           });
@@ -508,12 +652,103 @@
       });
     }
 
-    function onScanFailure(error) {
-      // ข้าม Log เพื่อไม่ให้ขัดจังหวะภาพวิดีโอ
+    function onTeacherScanFailure() {
+      // ข้าม Log รันสัญญาณแคม
+    }
+
+
+    // --- ส่วนจัดการลงคะแนนระบบ (Vote Submission System) ---
+
+    function openVotingInterface(user) {
+      document.getElementById('user-info-name').innerText = user.name;
+      document.getElementById('user-info-class').innerText = user.className;
+      
+      const grid = document.getElementById('candidates-grid');
+      grid.innerHTML = '';
+      
+      currentData.parties.forEach(p => {
+        grid.innerHTML += `
+          <div class="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden custom-shadow border border-gray-100 flex flex-col justify-between">
+            <div class="p-6 space-y-4">
+              <div class="flex items-center space-x-4">
+                <div class="w-14 h-14 bg-primary text-white text-2xl font-extrabold flex items-center justify-center rounded-2xl flex-shrink-0">
+                  ${p.no}
+                </div>
+                <div>
+                  <h3 class="font-bold text-base text-primary">${p.partyName}</h3>
+                  <p class="text-xs text-gray-400">ประธาน: ${p.leader}</p>
+                </div>
+              </div>
+              <img src="${p.imageUrl}" class="w-full h-36 object-cover rounded-xl border">
+              <div class="space-y-1 text-xs text-gray-500">
+                <p><strong>รองประธาน:</strong> ${p.deputy}</p>
+                <div class="bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-xl mt-1">
+                  <p class="font-semibold text-[11px]">นโยบายสำคัญ:</p>
+                  <p class="text-[10px] mt-0.5">${p.policy}</p>
+                </div>
+              </div>
+            </div>
+            <div class="p-4 bg-gray-50/50 border-t">
+              <button onclick="confirmVote('${p.no}')" class="w-full bg-primary text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center space-x-1">
+                <span class="material-icons text-sm">how_to_vote</span>
+                <span>ลงคะแนนเบอร์ ${p.no}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('voting-modal').classList.remove('hidden');
+    }
+
+    function confirmVote(candidateNo) {
+      let label = candidateNo === '0' ? 'ไม่ประสงค์ลงคะแนนเสียง' : 'หมายเลขสมัครเบอร์ ' + candidateNo;
+      Swal.fire({
+        title: 'ยืนยันส่งข้อมูลบัตรลงคะแนน?',
+        text: `คุณยืนยันที่จะเลือก "${label}" ใช่หรือไม่?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#1E88E5',
+        confirmButtonText: 'ยืนยัน',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          sendVoteToServer(candidateNo);
+        }
+      });
+    }
+
+    function sendVoteToServer(candidateNo) {
+      Swal.fire({ title: 'กำลังส่งผลคะแนน...', didOpen: () => { Swal.showLoading(); } });
+      const info = window.navigator.userAgent.substring(0, 45);
+
+      apiFetch(BACKEND_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: "submitVote",
+          studentId: currentUserSession.studentId,
+          candidateNo: candidateNo,
+          deviceInfo: info
+        })
+      }).then(res => {
+        Swal.close();
+        if (res.success) {
+          Swal.fire('สำเร็จ', 'ขอบคุณที่มาร่วมใช้สิทธิ์เลือกตั้ง', 'success').then(() => {
+            logoutVotingSession();
+            fetchDashboardData();
+          });
+        } else {
+          Swal.fire('ล้มเหลว', res.message, 'error');
+        }
+      });
+    }
+
+    function logoutVotingSession() {
+      currentUserSession = null;
+      document.getElementById('voting-modal').classList.add('hidden');
     }
 
     function generateAndPrintQRCodes() {
-      Swal.fire({ title: 'กำลังดาวน์โหลดข้อมูลรายชื่อ...', didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({ title: 'กำลังสแกนรายชื่อเพื่อจัดพิมพ์...', didOpen: () => { Swal.showLoading(); } });
       
       apiFetch(`${BACKEND_URL}?action=getStudentsList`)
         .then(students => {
@@ -631,135 +866,6 @@
       }
     }
 
-    function openLoginModal() {
-      document.getElementById('login-modal').classList.remove('hidden');
-    }
-    
-    function closeLoginModal() {
-      document.getElementById('login-modal').classList.add('hidden');
-      document.getElementById('student-id-input').value = '';
-    }
-
-    function handleLogin(event) {
-      event.preventDefault();
-      const studentId = document.getElementById('student-id-input').value.trim();
-      if (!studentId) return;
-
-      Swal.fire({ title: 'กำลังยืนยันฐานข้อมูลสิทธิ์...', didOpen: () => { Swal.showLoading(); } });
-
-      apiFetch(BACKEND_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: "authenticateUser",
-          studentId: studentId
-        })
-      }).then(response => {
-        Swal.close();
-        if (response.success) {
-          if (response.hasVoted) {
-            Swal.fire('ทำรายการโหวตแล้ว', 'รหัสสิทธิ์นี้ทำรายการเรียบร้อยแล้ว', 'warning');
-          } else {
-            currentUserSession = response;
-            closeLoginModal();
-            openVotingInterface(response);
-          }
-        } else {
-          Swal.fire('ปฏิเสธการสิทธิ์', response.message, 'error');
-        }
-      }).catch(() => {
-        Swal.close();
-        Swal.fire('ล้มเหลว', 'การลงทะเบียนสิทธิ์ขัดข้อง', 'error');
-      });
-    }
-
-    function openVotingInterface(user) {
-      document.getElementById('user-info-name').innerText = user.name;
-      document.getElementById('user-info-class').innerText = user.className;
-      
-      const grid = document.getElementById('candidates-grid');
-      grid.innerHTML = '';
-      
-      currentData.parties.forEach(p => {
-        grid.innerHTML += `
-          <div class="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden custom-shadow border border-gray-100 flex flex-col justify-between">
-            <div class="p-6 space-y-4">
-              <div class="flex items-center space-x-4">
-                <div class="w-14 h-14 bg-primary text-white text-2xl font-extrabold flex items-center justify-center rounded-2xl flex-shrink-0">
-                  ${p.no}
-                </div>
-                <div>
-                  <h3 class="font-bold text-base text-primary">${p.partyName}</h3>
-                  <p class="text-xs text-gray-400">สมัครประธาน: ${p.leader}</p>
-                </div>
-              </div>
-              <img src="${p.imageUrl}" class="w-full h-36 object-cover rounded-xl border">
-              <div class="space-y-1 text-xs text-gray-500">
-                <p><strong>รองประธาน:</strong> ${p.deputy}</p>
-                <div class="bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-xl mt-1">
-                  <p class="font-semibold text-[11px]">นโยบายสำคัญ:</p>
-                  <p class="text-[10px] mt-0.5">${p.policy}</p>
-                </div>
-              </div>
-            </div>
-            <div class="p-4 bg-gray-50/50 border-t">
-              <button onclick="confirmVote('${p.no}')" class="w-full bg-primary text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center space-x-1">
-                <span class="material-icons text-sm">how_to_vote</span>
-                <span>ลงคะแนนเบอร์ ${p.no}</span>
-              </button>
-            </div>
-          </div>
-        `;
-      });
-      document.getElementById('voting-modal').classList.remove('hidden');
-    }
-
-    function confirmVote(candidateNo) {
-      let label = candidateNo === '0' ? 'ไม่ประสงค์ลงคะแนนเสียง' : 'หมายเลขสมัครเบอร์ ' + candidateNo;
-      Swal.fire({
-        title: 'ยืนยันลงทะเบียน?',
-        text: `คุณยืนยันที่จะโหวตให้กับ "${label}" ใช่หรือไม่?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#1E88E5',
-        confirmButtonText: 'ยืนยัน',
-        cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          sendVoteToServer(candidateNo);
-        }
-      });
-    }
-
-    function sendVoteToServer(candidateNo) {
-      Swal.fire({ title: 'กำลังประมวลผลข้อมูล...', didOpen: () => { Swal.showLoading(); } });
-      const info = window.navigator.userAgent.substring(0, 45);
-
-      apiFetch(BACKEND_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: "submitVote",
-          studentId: currentUserSession.studentId,
-          candidateNo: candidateNo,
-          deviceInfo: info
-        })
-      }).then(res => {
-        Swal.close();
-        if (res.success) {
-          Swal.fire('ลงคะแนนเสร็จสิ้น', 'ขอบคุณสำหรับการมีส่วนร่วม', 'success').then(() => {
-            logoutVotingSession();
-            fetchDashboardData();
-          });
-        } else {
-          Swal.fire('ข้อผิดพลาด', res.message, 'error');
-        }
-      });
-    }
-
-    function logoutVotingSession() {
-      currentUserSession = null;
-      document.getElementById('voting-modal').classList.add('hidden');
-    }
-
     function exportToExcel() {
       if (!currentData || !currentData.isCompleted) {
         Swal.fire('ปิดกั้นการเข้าสิทธิ์', 'ไม่สามารถสร้างรายงาน Excel ได้จนกว่านักเรียนจะลงประมวลผลครบ 100%', 'warning');
@@ -779,21 +885,21 @@
 
     function resetSystemPrompt() {
       Swal.fire({
-        title: 'คุณต้องการล้างข้อมูลเพื่อเริ่มรอบใหม่?',
-        text: "การดำเนินการนี้ไม่สามารถยกเลิกได้ ประวัติลงทะเบียนและสิทธิ์ผู้ใช้งานจะถูกรีเซ็ตทั้งหมด",
+        title: 'ยืนยันการล้างข้อมูลของผลเลือกตั้งรอบนี้?',
+        text: "การยืนยันข้อมูลจะทำประวัติการแสกนทั้งหมดถูกล้างกลับไปเป็น Pending สำหรับการใช้งานครั้งถัดไป",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        confirmButtonText: 'ล้างข้อมูลทั้งหมด'
+        confirmButtonText: 'รีเซ็ตระบบ'
       }).then((result) => {
         if (result.isConfirmed) {
-          Swal.fire({ title: 'กำลังดำเนินการหลังบ้าน...', didOpen: () => { Swal.showLoading(); } });
+          Swal.fire({ title: 'กำลังรีเซ็ต...', didOpen: () => { Swal.showLoading(); } });
           apiFetch(BACKEND_URL, {
             method: 'POST',
             body: JSON.stringify({ action: "resetVotes" })
           }).then(() => {
             Swal.close();
-            Swal.fire('เสร็จสิ้น', 'ระบบได้รับการรีเซ็ตเรียบร้อย', 'success').then(() => {
+            Swal.fire('รีเซ็ตสำเร็จ', 'ประวัติได้รับการล้างค่าเรียบร้อย', 'success').then(() => {
               fetchDashboardData();
             });
           });
