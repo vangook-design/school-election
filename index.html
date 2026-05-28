@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" class="light">
+<html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,12 +13,11 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
-  <!-- Html5Qrcode (สำหรับวิเคราะห์ QR-Code บนสมาร์ตโฟน) -->
+  <!-- Html5Qrcode (สำหรับประมวลผล QR-Code) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: { sarabun: ['Sarabun', 'sans-serif'] },
@@ -34,7 +33,7 @@
     }
   </script>
   <style>
-    body { font-family: 'Sarabun', sans-serif; transition: background-color 0.3s, color 0.3s; }
+    body { font-family: 'Sarabun', sans-serif; background-color: #f9fafb; color: #1f2937; }
     .custom-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 10px -1px rgba(0, 0, 0, 0.03); }
     @keyframes pulse-glow {
       0% { transform: scale(0.98); opacity: 0.9; }
@@ -44,15 +43,15 @@
     .voting-btn-glow { animation: pulse-glow 2s infinite ease-in-out; }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+<body class="min-h-screen">
 
   <script>
     // *** สำคัญมาก: กรุณานำ URL Web App ที่ได้จาก Google Apps Script มาใส่ตรงนี้ ***
     const BACKEND_URL = "https://script.google.com/macros/s/AKfycby51yQj8VkJSv4O-_kWn4qhmhY7-J3sJk9Sgez7ZKgjUa1Ivj9d2oRUS9VDHMvSfgY-/exec";
   </script>
 
-  <!-- Navigation bar -->
-  <header class="sticky top-0 z-40 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-b border-gray-100 dark:border-gray-700 py-3 px-4 shadow-sm">
+  <!-- Navigation bar (ตัดปุ่มสลับสีหน้าจอและเมนูครูขาดเรียนออก) -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100 py-3 px-4 shadow-sm">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="bg-primary text-white p-2 rounded-xl flex items-center justify-center shadow-md">
@@ -60,19 +59,8 @@
         </div>
         <div>
           <h1 class="font-bold text-base md:text-lg leading-tight text-primary">ระบบเลือกตั้งประธานนักเรียน</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400">ระบบแสกนสิทธิ์ QR-Code ถือคะแนนเสียง 100%</p>
+          <p class="text-xs text-gray-500">ระบบแสกนสิทธิ์ QR-Code ถือคะแนนเสียง 100%</p>
         </div>
-      </div>
-      
-      <div class="flex items-center space-x-3">
-        <!-- ปุ่มเปิดสแกนบันทึกสถานะผู้ขาดเรียน (สำหรับคุณครู) -->
-        <button onclick="openTeacherQRScanner()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center space-x-1 shadow-sm transition">
-          <span class="material-icons text-sm">assignment_late</span>
-          <span>ครูบันทึกสถานะขาดเรียน</span>
-        </button>
-        <button onclick="toggleDarkMode()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition">
-          <span id="dark-mode-icon" class="material-icons text-sm block">dark_mode</span>
-        </button>
       </div>
     </div>
   </header>
@@ -81,22 +69,22 @@
 
     <!-- รายงานผลสถิติการใช้งานด้านบน -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+      <div class="bg-white p-5 rounded-2xl custom-shadow border border-gray-100 flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-gray-500 uppercase">เปอร์เซ็นต์นักเรียนที่ประมวลผลสิทธิ์แล้ว</span>
+          <span class="text-xs font-semibold text-gray-500 uppercase">เปอร์เซ็นต์ผู้ใช้สิทธิ์สะสม</span>
           <span class="material-icons text-primary text-lg">donut_large</span>
         </div>
         <div class="my-2">
           <span id="stat-percent" class="text-3xl font-bold">0.0%</span>
         </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div class="w-full bg-gray-200 rounded-full h-2">
           <div id="stat-progress-bar" class="bg-primary h-2 rounded-full transition-all duration-1000" style="width: 0%"></div>
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+      <div class="bg-white p-5 rounded-2xl custom-shadow border border-gray-100 flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-gray-500 uppercase">มาใช้สิทธิ์เลือกตั้งจริง</span>
+          <span class="text-xs font-semibold text-gray-500 uppercase">ผู้มาใช้สิทธิ์เลือกตั้งจริง</span>
           <span class="material-icons text-green-500 text-lg">check_circle</span>
         </div>
         <div class="my-2">
@@ -106,34 +94,34 @@
         <p class="text-[10px] text-gray-400">จากผู้มีสิทธิ์ทั้งหมด <span id="stat-total">0</span> คน</p>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+      <div class="bg-white p-5 rounded-2xl custom-shadow border border-gray-100 flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-gray-500 uppercase">สถานะนักเรียนคงค้าง</span>
+          <span class="text-xs font-semibold text-gray-500 uppercase">ผู้ยังไม่ได้มาใช้สิทธิ์</span>
           <span class="material-icons text-amber-500 text-lg">pending_actions</span>
         </div>
         <div class="my-2">
           <span id="stat-pending" class="text-3xl font-bold text-amber-500">0</span>
           <span class="text-xs text-gray-400 ml-1">คน</span>
         </div>
-        <p class="text-[10px] text-gray-400">ไม่มาใช้สิทธิ์ (ระบุเหตุผลแล้ว): <span id="stat-absent" class="font-semibold">0</span> คน</p>
+        <p class="text-[10px] text-gray-400">ผู้ขาดสิทธิ์การเลือกตั้ง (ระบุเหตุผล): <span id="stat-absent" class="font-semibold">0</span> คน</p>
       </div>
     </div>
 
     <!-- แผงหลักสำหรับปุ่มโหวตด้วยการแสกนคิวอาร์โค้ด -->
-    <div id="action-panel" class="bg-white dark:bg-gray-800 border-2 border-primary/20 rounded-3xl p-10 text-center max-w-2xl mx-auto custom-shadow relative overflow-hidden my-8">
+    <div id="action-panel" class="bg-white border-2 border-primary/20 rounded-3xl p-10 text-center max-w-2xl mx-auto custom-shadow relative overflow-hidden my-8">
       <div class="absolute -top-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
       <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
 
       <div class="relative z-10 space-y-4">
-        <h3 class="font-bold text-xl md:text-2xl text-gray-800 dark:text-white">
+        <h3 class="font-bold text-xl md:text-2xl text-gray-800">
           ลงคะแนนเสียงประธานนักเรียนออนไลน์
         </h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+        <p class="text-sm text-gray-500 max-w-md mx-auto">
           สแกนสิทธิ์ QR-Code ประจำตัวเพื่อแสดงตัวตน ดึงข้อมูล และดำเนินการโหวตลงสิทธิ์ทันที
         </p>
         
         <div class="pt-4 pb-2">
-          <button onclick="openVoterQRScanner()" class="voting-btn-glow relative inline-flex items-center justify-center p-0.5 mb-2 overflow-hidden text-lg font-bold text-white rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 transform hover:scale-[1.05] transition-all duration-300 shadow-2xl shadow-blue-500/40">
+          <button onclick="openVoterQRScanner()" class="voting-btn-glow relative inline-flex items-center justify-center p-0.5 mb-2 overflow-hidden text-lg font-bold text-white rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 hover:text-white transform hover:scale-[1.05] transition-all duration-300 shadow-2xl shadow-blue-500/40">
             <span class="relative px-12 py-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center space-x-3 text-xl md:text-2xl">
               <span class="material-icons text-2xl md:text-3xl animate-pulse">qr_code_scanner</span>
               <span>แตะเพื่อสแกน QR-Code ลงคะแนน</span>
@@ -144,24 +132,24 @@
     </div>
 
     <!-- บล็อกแสดงรายงานคะแนน (จะปลดล็อกเมื่อข้อมูลนักเรียนครบ 100% เท่านั้น) -->
-    <div id="results-lock-section" class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 p-8 rounded-2xl text-center">
+    <div id="results-lock-section" class="bg-amber-50 border border-amber-200 p-8 rounded-2xl text-center">
       <span class="material-icons text-4xl text-amber-500 animate-bounce">lock</span>
-      <h4 class="font-bold text-lg mt-2 text-amber-800 dark:text-amber-400">สรุปคะแนนโหวตถูกระงับชั่วคราว</h4>
-      <p class="text-sm text-amber-600 dark:text-amber-300 max-w-lg mx-auto mt-1">
-        ผลสรุปผลคะแนนเลือกตั้งเรียลไทม์จะถูกแสดงและรายงานทันทีเมื่อนักเรียนทุกคนแสดงตนครบ 100% (นับยอดลงคะแนนจริงรวมกับนักเรียนที่ครูบันทึกสาเหตุที่ขาดเรียนแล้ว)
+      <h4 class="font-bold text-lg mt-2 text-amber-800">สรุปคะแนนโหวตถูกระงับชั่วคราว</h4>
+      <p class="text-sm text-amber-600 max-w-lg mx-auto mt-1">
+        ผลสรุปคะแนนเลือกตั้งเรียลไทม์จะถูกรายงานอย่างเป็นทางการเมื่อนักเรียนลงสิทธิ์ครบ 100% (ผู้ลงทะเบียนจริง + ยอดนักเรียนไม่มาปฏิบัติสิทธิ์เลือกตั้งตามข้อความระบุ <span id="stat-absent-lock" class="font-semibold text-rose-600">0</span> รายชื่อ)
       </p>
     </div>
 
     <div id="results-unlocked-section" class="hidden space-y-6">
-      <div class="bg-emerald-100 dark:bg-emerald-950/40 border-l-4 border-emerald-500 p-4 rounded-xl text-emerald-800 dark:text-emerald-200">
+      <div class="bg-emerald-100 border-l-4 border-emerald-500 p-4 rounded-xl text-emerald-800">
         <div class="flex items-center">
           <span class="material-icons mr-2">check_circle</span>
-          <span class="font-bold">ตรวจสอบข้อมูลนักเรียนครบ 100% แล้ว ปลดล็อกรายงานผลคะแนนอย่างเป็นทางการ</span>
+          <span class="font-bold">ปลดล็อกสรุปคะแนนเสียงเป็นเอกฉันท์ 100% รายงานผลคะแนนผู้ชนะเลือกตั้ง</span>
         </div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 lg:col-span-1">
+        <div class="bg-white p-5 rounded-2xl custom-shadow border border-gray-100 lg:col-span-1">
           <h3 class="font-bold text-base mb-4 flex items-center">
             <span class="material-icons text-amber-500 mr-2">emoji_events</span>
             อันดับคะแนนผู้สมัคร
@@ -169,7 +157,7 @@
           <div id="leaderboard-list" class="space-y-3"></div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 lg:col-span-2 space-y-6">
+        <div class="bg-white p-5 rounded-2xl custom-shadow border border-gray-100 lg:col-span-2 space-y-6">
           <h3 class="font-bold text-base flex items-center text-primary">
             <span class="material-icons mr-2">analytics</span>
             กราฟรายงานผลคะแนนอย่างเป็นทางการ
@@ -184,7 +172,7 @@
     </div>
 
     <!-- เมนูของคุณครู -->
-    <div class="flex flex-wrap gap-2 justify-between items-center bg-gray-100 dark:bg-gray-800/40 p-4 rounded-2xl">
+    <div class="flex flex-wrap gap-2 justify-between items-center bg-gray-100 p-4 rounded-2xl">
       <div class="flex items-center space-x-1 text-xs text-gray-500">
         <span class="material-icons text-sm">settings</span>
         <span>ระบบจัดการสำหรับผู้ดูแลระบบและคุณครู</span>
@@ -207,10 +195,10 @@
 
   </main>
 
-  <!-- Modal สำหรับสแกน QR-Code เพื่อเข้าลงคะแนนสิทธิ์ของนักเรียน -->
+  <!-- Modal สำหรับสแกน QR-Code ด้วยโครงสร้างแรกเริ่มที่เสถียรที่สุด -->
   <div id="voter-scan-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/80 backdrop-blur-sm">
-      <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full custom-shadow border border-gray-100 relative">
+      <div class="bg-white rounded-3xl p-6 max-w-md w-full custom-shadow border border-gray-100 relative">
         <div class="flex justify-between items-center mb-3">
           <h2 class="text-base font-bold flex items-center text-primary">
             <span class="material-icons mr-1">qr_code_scanner</span>
@@ -221,14 +209,14 @@
           </button>
         </div>
         
-        <p class="text-xs text-gray-500 mb-4">ส่อง QR-code สิทธิ์ประจำตัวของท่าน หรืออัปโหลดไฟล์ภาพ หรือใช้การคีย์ข้อมูลรหัสผ่านด้านล่างหากกล้องทำงานไม่ได้</p>
+        <p class="text-xs text-gray-500 mb-4">ส่องคิวอาร์โค้ด หรืออัปโหลดไฟล์รูปภาพคิวอาร์โค้ดสิทธิ์ของนักเรียนเพื่อเปิดใช้ระบบบัตรลงคะแนนทันที</p>
         
-        <!-- จอภาพของกล้องแสกนสด -->
-        <div class="overflow-hidden rounded-2xl bg-black aspect-square max-w-xs mx-auto mb-4 border-2 border-primary relative">
-          <div id="voter-qr-reader" class="w-full h-full"></div>
+        <!-- จอแสดงผลการแสกนกล้อง (ใช้กล่อง ID: qr-reader ตรงกับโครงสร้างแรก) -->
+        <div class="overflow-hidden rounded-2xl bg-black aspect-square max-w-xs mx-auto mb-4 border-2 border-primary">
+          <div id="qr-reader" class="w-full"></div>
         </div>
         
-        <!-- แถบอัปโหลดไฟล์ภาพ -->
+        <!-- ระบบFallback 1: แสกนผ่านรูปภาพ -->
         <div class="mb-4">
           <label class="w-full bg-blue-50 text-blue-700 border border-blue-200 rounded-xl py-2.5 px-4 flex items-center justify-center space-x-2 cursor-pointer font-bold hover:bg-blue-100 transition text-xs">
             <span class="material-icons text-sm">add_a_photo</span>
@@ -237,13 +225,13 @@
           </label>
         </div>
 
-        <hr class="border-gray-100 dark:border-gray-700 my-3" />
+        <hr class="border-gray-100 my-3" />
 
-        <!-- แถบระบุรหัสประจำตัวตรงกรณีกล้องติดขัด -->
+        <!-- ระบบFallback 2: คีย์รหัสประจำตัวตรง -->
         <div class="space-y-2">
-          <label class="block text-center text-xs font-semibold text-gray-400 uppercase">มีปัญหาในการสแกน? กรอกรหัสลงคะแนนโดยตรง</label>
+          <label class="block text-center text-xs font-semibold text-gray-400 uppercase">กรณีกล้องมีปัญหา: กรอกรหัสลงคะแนนโดยตรง</label>
           <div class="flex space-x-2">
-            <input id="voter-manual-id" type="text" placeholder="ตัวอย่าง: STD001" class="flex-1 px-4 py-2 text-sm rounded-xl border outline-none text-center font-bold uppercase dark:bg-gray-700">
+            <input id="voter-manual-id" type="text" placeholder="ตัวอย่าง: STD001" class="flex-1 px-4 py-2 text-sm rounded-xl border outline-none text-center font-bold uppercase">
             <button onclick="handleManualLoginSubmit()" class="bg-primary hover:bg-primary-dark text-white text-xs font-bold px-4 py-2 rounded-xl transition">
               ยืนยันรหัส
             </button>
@@ -251,42 +239,7 @@
         </div>
 
         <div class="text-center text-xs text-rose-500 font-semibold mt-3" id="voter-scan-status">
-          กำลังรอสัญญาณภาพ...
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal สำหรับแสกนบันทึกสถานะผู้ขาดเรียน (สำหรับคุณครู) -->
-  <div id="teacher-scan-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
-    <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/80 backdrop-blur-sm">
-      <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full custom-shadow border border-gray-100 relative">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-base font-bold flex items-center text-amber-600">
-            <span class="material-icons mr-1">assignment_late</span>
-            ระบบเช็กชื่อผู้ขาดเรียน (ครูผู้ดูแล)
-          </h2>
-          <button onclick="closeTeacherQRScanner()" class="text-gray-400 hover:text-gray-600">
-            <span class="material-icons">close</span>
-          </button>
-        </div>
-        
-        <p class="text-xs text-gray-500 mb-4">แสกนรหัส QR-code รายชื่อของนักเรียนที่ไม่มาในวันนี้เพื่อทำการลงบันทึกสถานะ</p>
-        
-        <div class="overflow-hidden rounded-2xl bg-black aspect-square max-w-xs mx-auto mb-4 border-2 border-amber-500 relative">
-          <div id="teacher-qr-reader" class="w-full h-full"></div>
-        </div>
-
-        <div class="mb-4">
-          <label class="w-full bg-amber-50 text-amber-700 border border-amber-200 rounded-xl py-2.5 px-4 flex items-center justify-center space-x-2 cursor-pointer font-bold hover:bg-amber-100 transition text-xs">
-            <span class="material-icons text-sm">add_a_photo</span>
-            <span>ถ่ายภาพ หรือ อัปโหลดภาพ QR-code</span>
-            <input type="file" id="teacher-qr-file" accept="image/*" class="hidden" onchange="scanTeacherQRFromFile(this)">
-          </label>
-        </div>
-
-        <div class="text-center text-xs text-rose-500 font-semibold mt-2" id="teacher-scan-status">
-          กำลังรอสัญญาณภาพ...
+          กำลังประมวลผลระบบสแกน...
         </div>
       </div>
     </div>
@@ -294,10 +247,10 @@
 
   <!-- บัตรลงคะแนนเลือกตั้ง -->
   <div id="voting-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+    <div class="min-h-screen bg-gray-50 p-4 md:p-8">
       <div class="max-w-5xl mx-auto space-y-6">
         
-        <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl custom-shadow flex items-center justify-between border border-gray-100">
+        <div class="bg-white p-4 rounded-2xl custom-shadow flex items-center justify-between border border-gray-100">
           <div class="flex items-center space-x-3">
             <div class="bg-primary/10 text-primary p-2 rounded-full"><span class="material-icons">account_circle</span></div>
             <div>
@@ -313,7 +266,7 @@
         <div id="candidates-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 py-4"></div>
 
         <div class="flex justify-center py-4">
-          <button onclick="confirmVote('0')" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-100 font-bold py-3 px-12 rounded-2xl flex items-center space-x-2">
+          <button onclick="confirmVote('0')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-12 rounded-2xl flex items-center space-x-2">
             <span class="material-icons">block</span>
             <span>ไม่ประสงค์ลงคะแนนเสียง</span>
           </button>
@@ -329,27 +282,7 @@
     let pieChart = null;
     let lineChart = null;
     let currentUserSession = null;
-    
-    let voterScanner = null;
-    let teacherScanner = null;
-
-    function toggleDarkMode() {
-      const html = document.documentElement;
-      const icon = document.getElementById('dark-mode-icon');
-      if (html.classList.contains('dark')) {
-        html.classList.remove('dark');
-        icon.innerText = 'dark_mode';
-        localStorage.setItem('theme', 'light');
-      } else {
-        html.classList.add('dark');
-        icon.innerText = 'light_mode';
-        localStorage.setItem('theme', 'dark');
-      }
-    }
-
-    if (localStorage.getItem('theme') === 'dark') {
-      document.documentElement.classList.add('dark');
-    }
+    let html5QrcodeScanner = null;
 
     async function apiFetch(url, params = {}) {
       try {
@@ -390,6 +323,7 @@
       document.getElementById('stat-voted').innerText = data.votedCount;
       document.getElementById('stat-total').innerText = data.totalUsers;
       document.getElementById('stat-absent').innerText = data.absentCount;
+      document.getElementById('stat-absent-lock').innerText = data.absentCount;
       document.getElementById('stat-pending').innerText = data.pendingCount;
 
       if (data.isCompleted) {
@@ -399,7 +333,7 @@
           const medalColor = index === 0 ? 'text-amber-500' : (index === 1 ? 'text-slate-400' : 'text-amber-700');
           const rankMedal = index < 3 ? `<span class="material-icons ${medalColor}">emoji_events</span>` : `<span class="font-bold text-gray-500 w-6 text-center">${index + 1}</span>`;
           leaderboardList.innerHTML += `
-            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/40 rounded-xl">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
               <div class="flex items-center space-x-3 truncate">
                 ${rankMedal}
                 <div class="truncate">
@@ -417,51 +351,32 @@
       }
     }
 
-    // --- ปรับปรุงระบบสแกนกล้องสดฝั่งนักเรียนลงคะแนนเสียง (Voter QR Scanner) ---
+    // --- กู้ระบบแสกนกล้องสิทธิ์รูปพรรณคิวอาร์โค้ดดั้งเดิม ---
 
     function openVoterQRScanner() {
-      // 1. บังคับแสดงผลโมดอลขอบเขตพื้นที่ให้เสร็จสิ้นก่อนเริ่มผูกสคริปต์
       document.getElementById('voter-scan-modal').classList.remove('hidden');
-      document.getElementById('voter-scan-status').innerText = "กำลังเชื่อมต่ออินพุตกล้องสด...";
+      document.getElementById('voter-scan-status').innerText = "กำลังสแกนผ่านกล้อง...";
       
-      setTimeout(() => {
-        try {
-          voterScanner = new Html5Qrcode("voter-qr-reader");
-          
-          // สั่งเริ่มกล้องทันทีโดยไม่ต้องตรวจสิทธิ์ล่วงหน้า ป้องกันกล้องค้างคาบล็อกเรซ
-          voterScanner.start(
-            { facingMode: "environment" },
-            { 
-              fps: 10, 
-              qrbox: function(width, height) {
-                return { width: width * 0.7, height: height * 0.7 }; // ขนาดแผงสแกนยืดหยุ่นตามหน้าจอ
-              }
-            },
-            onVoterScanSuccess,
-            onVoterScanFailure
-          ).catch(err => {
-            console.warn("Camera start err:", err);
-            showVoterFallbackMessage();
-          });
-        } catch (err) {
-          console.error("Scanner setup err:", err);
-          showVoterFallbackMessage();
-        }
-      }, 150); // ดีเลย์การวาดเฟรม DOM เล็กน้อย
-    }
-
-    function showVoterFallbackMessage() {
-      document.getElementById('voter-scan-status').innerHTML = 
-        "<span class='text-amber-600 font-semibold'>ไม่สามารถระบุระบบประมวลผลกล้องสดได้<br>โปรดอัปโหลดไฟล์ หรือกรอกรหัสด้วยคีย์บอร์ดด้านล่าง</span>";
+      // การทำงานแบบโครงสร้างหลักที่เสถียรที่สุด
+      html5QrcodeScanner = new Html5Qrcode("qr-reader");
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        onVoterScanSuccess,
+        onVoterScanFailure
+      ).catch(err => {
+        document.getElementById('voter-scan-status').innerHTML = 
+          "<span class='text-amber-600 font-semibold'>ไม่สามารถระบุแคมกล้องสดได้<br>โปรดแตะเพื่อนำเข้ารูปภาพแทน</span>";
+      });
     }
 
     function closeVoterQRScanner() {
       document.getElementById('voter-scan-modal').classList.add('hidden');
       document.getElementById('voter-qr-file').value = "";
       document.getElementById('voter-manual-id').value = "";
-      if (voterScanner) {
-        voterScanner.stop().then(() => {
-          voterScanner = null;
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+          html5QrcodeScanner = null;
         }).catch(err => console.error(err));
       }
     }
@@ -469,16 +384,16 @@
     function scanVoterQRFromFile(input) {
       if (input.files && input.files[0]) {
         const file = input.files[0];
-        document.getElementById('voter-scan-status').innerText = "กำลังถอดพิกัดข้อมูลรูปภาพไฟล์...";
+        document.getElementById('voter-scan-status').innerText = "กำลังคำนวณถอดรหัสรูปภาพ...";
         
-        const tempScanner = new Html5Qrcode("voter-qr-reader");
+        const tempScanner = new Html5Qrcode("qr-reader");
         tempScanner.scanFile(file, true)
           .then(decodedText => {
             onVoterScanSuccess(decodedText);
           })
           .catch(() => {
-            Swal.fire('ตรวจจับล้มเหลว', 'ไม่พบ QR Code ในภาพถ่ายหรือภาพเบลอเกินไป', 'error');
-            document.getElementById('voter-scan-status').innerText = "ล้มเหลว: โปรดอัปโหลดใหม่อีกครั้ง";
+            Swal.fire('ตรวจจับล้มเหลว', 'ไม่พบ QR Code ในไฟล์รูปภาพ', 'error');
+            document.getElementById('voter-scan-status').innerText = "ล้มเหลว: ภาพไม่ชัดเจน";
           });
       }
     }
@@ -486,7 +401,7 @@
     function handleManualLoginSubmit() {
       const studentId = document.getElementById('voter-manual-id').value.trim();
       if (!studentId) {
-        Swal.fire('คำเตือน', 'กรุณาระบุรหัสประจำตัวเพื่อยืนยันตัวตน', 'warning');
+        Swal.fire('คำเตือน', 'กรุณาระบุรหัสประจำตัวของท่าน', 'warning');
         return;
       }
       processVoterAuthentication(studentId);
@@ -499,11 +414,12 @@
     }
 
     function onVoterScanFailure() {
-      // ปล่อยข้าม Log การจับความเคลื่อนไหวทั่วไป
+      // ข้ามตัวเก็บสแต็กกล้อง
     }
 
+    // ข้ามหน้าต่างยืนยัน -> นำนักเรียนเข้าสู่หน้าลงคะแนนเสียงโดยตรง
     function processVoterAuthentication(studentId) {
-      Swal.fire({ title: 'กำลังดึงฐานข้อมูลสิทธิ์...', didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({ title: 'กำลังประมวลผลสิทธิ์...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
       apiFetch(BACKEND_URL, {
         method: 'POST',
@@ -515,162 +431,20 @@
         Swal.close();
         if (response.success) {
           if (response.hasVoted) {
-            Swal.fire('ทำรายการแล้ว', 'รหัสประจำตัวนี้ได้ทำรายการลงทะเบียนเลือกตั้งสมบูรณ์แล้ว', 'warning');
+            Swal.fire('สิทธิ์ถูกใช้งานแล้ว', 'รหัสสิทธิ์ของท่านได้ทำการลงคะแนนเสร็จสิ้นเรียบร้อยแล้ว', 'warning');
           } else {
-            Swal.fire({
-              title: 'ยืนยันแสดงตนผู้ใช้สิทธิ์',
-              html: `
-                <div class="text-left bg-gray-50 p-4 rounded-xl space-y-2 text-sm text-gray-700">
-                  <p><strong>ชื่อ-นามสกุล:</strong> ${response.name}</p>
-                  <p><strong>ชั้นเรียน:</strong> ${response.className}</p>
-                  <p><strong>รหัสประจำตัว:</strong> ${response.studentId}</p>
-                </div>
-                <p class="text-xs text-rose-500 mt-3 font-semibold">* ตรวจสอบว่าข้อมูลตรงกับตัวท่านก่อนกดยืนยัน</p>
-              `,
-              icon: 'question',
-              showCancelButton: true,
-              confirmButtonColor: '#1E88E5',
-              confirmButtonText: 'ตกลง (เข้าสู่หน้าโหวต)',
-              cancelButtonText: 'ยกเลิก'
-            }).then((result) => {
-              if (result.isConfirmed) {
-                currentUserSession = response;
-                openVotingInterface(response);
-              }
-            });
+            // โอนเข้าสู่หน้าต่างบัตรลงคะแนนทันทีโดยไม่ต้องคลิกตกลงซ้ำซ้อน
+            currentUserSession = response;
+            openVotingInterface(response);
           }
         } else {
-          Swal.fire('ปฏิเสธสิทธิ์เข้าใช้', response.message, 'error');
+          Swal.fire('ปฏิเสธการสิทธิ์', response.message, 'error');
         }
       }).catch(() => {
         Swal.close();
-        Swal.fire('ระบบขัดข้อง', 'การตรวจสอบสิทธิ์เครือข่ายล้มเหลว', 'error');
+        Swal.fire('ข้อผิดพลาดการเชื่อมต่อ', 'การเชื่อมต่อ API ล้มเหลว', 'error');
       });
     }
-
-
-    // --- ปรับปรุงระบบสแกนบันทึกสถานะผู้ขาดเรียน (Teacher QR Scanner) ---
-
-    function openTeacherQRScanner() {
-      document.getElementById('teacher-scan-modal').classList.remove('hidden');
-      document.getElementById('teacher-scan-status').innerText = "กำลังเชื่อมต่อกล้องสด...";
-      
-      setTimeout(() => {
-        try {
-          teacherScanner = new Html5Qrcode("teacher-qr-reader");
-          
-          teacherScanner.start(
-            { facingMode: "environment" },
-            { 
-              fps: 10, 
-              qrbox: function(width, height) {
-                return { width: width * 0.7, height: height * 0.7 };
-              }
-            },
-            onTeacherScanSuccess,
-            onTeacherScanFailure
-          ).catch(err => {
-            console.warn("Teacher Camera start err:", err);
-            showTeacherFallbackMessage();
-          });
-        } catch (err) {
-          console.error("Teacher Setup err:", err);
-          showTeacherFallbackMessage();
-        }
-      }, 150);
-    }
-
-    function showTeacherFallbackMessage() {
-      document.getElementById('teacher-scan-status').innerHTML = 
-        "<span class='text-amber-600 font-semibold'>ไม่สามารถเรียกใช้งานแผงกล้องสดได้<br>คุณครูสามารถระบุบันทึกสิทธิ์โดยอัปโหลดไฟล์ภาพแทน</span>";
-    }
-
-    function closeTeacherQRScanner() {
-      document.getElementById('teacher-scan-modal').classList.add('hidden');
-      document.getElementById('teacher-qr-file').value = "";
-      if (teacherScanner) {
-        teacherScanner.stop().then(() => {
-          teacherScanner = null;
-        }).catch(err => console.error(err));
-      }
-    }
-
-    function scanTeacherQRFromFile(input) {
-      if (input.files && input.files[0]) {
-        const file = input.files[0];
-        document.getElementById('teacher-scan-status').innerText = "กำลังดึงพิกเซลและถอดรหัสรูปภาพไฟล์...";
-        
-        const tempScanner = new Html5Qrcode("teacher-qr-reader");
-        tempScanner.scanFile(file, true)
-          .then(decodedText => {
-            onTeacherScanSuccess(decodedText);
-          })
-          .catch(() => {
-            Swal.fire('ตรวจจับล้มเหลว', 'ไม่พบ QR Code ในไฟล์รูปภาพ', 'error');
-            document.getElementById('teacher-scan-status').innerText = "ล้มเหลว: ภาพไม่ชัดเจน";
-          });
-      }
-    }
-
-    function onTeacherScanSuccess(decodedText) {
-      closeTeacherQRScanner();
-      const studentId = decodedText.trim();
-      
-      Swal.fire({
-        title: 'ครูบันทึกสถานะผู้ขาดเรียน',
-        text: `รหัสประจำตัวนักเรียน: ${studentId}`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#E65100',
-        confirmButtonText: 'ระบุเหตุผลไม่มาลงสิทธิ์',
-        cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          Swal.fire({
-            title: 'ระบุสาเหตุการไม่เข้าเรียน/การลา',
-            input: 'text',
-            inputPlaceholder: 'ตัวอย่าง: ลาป่วย, ขาดเรียน, ไปกิจกรรมภายนอก',
-            showCancelButton: true,
-            confirmButtonText: 'ยืนยัน',
-            cancelButtonText: 'ยกเลิก',
-            preConfirm: (value) => {
-              if (!value) {
-                Swal.showValidationMessage('จำเป็นต้องกรอกรายละเอียดก่อนทำรายการ');
-              }
-              return value;
-            }
-          }).then((inputRes) => {
-            if (inputRes.isConfirmed) {
-              Swal.fire({ title: 'กำลังปรับโครงสร้างฐานข้อมูล...', didOpen: () => { Swal.showLoading(); } });
-              
-              apiFetch(BACKEND_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                  action: "markAbsent",
-                  studentId: studentId,
-                  reason: inputRes.value
-                })
-              }).then(response => {
-                Swal.close();
-                if (response.success) {
-                  Swal.fire('ทำรายการสำเร็จ', `ปรับปรุงสถานะนักเรียนเรียบร้อยแล้ว`, 'success');
-                  fetchDashboardData();
-                } else {
-                  Swal.fire('ล้มเหลว', response.message, 'error');
-                }
-              });
-            }
-          });
-        }
-      });
-    }
-
-    function onTeacherScanFailure() {
-      // ข้าม Log เพื่อคงความสมูทในการสตรีมกล้อง
-    }
-
-
-    // --- ส่วนบริการข้อมูลพรรคและการโหวตคะแนนเสียง ---
 
     function openVotingInterface(user) {
       document.getElementById('user-info-name').innerText = user.name;
@@ -681,7 +455,7 @@
       
       currentData.parties.forEach(p => {
         grid.innerHTML += `
-          <div class="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden custom-shadow border border-gray-100 flex flex-col justify-between">
+          <div class="bg-white rounded-3xl overflow-hidden custom-shadow border border-gray-100 flex flex-col justify-between">
             <div class="p-6 space-y-4">
               <div class="flex items-center space-x-4">
                 <div class="w-14 h-14 bg-primary text-white text-2xl font-extrabold flex items-center justify-center rounded-2xl flex-shrink-0">
@@ -695,7 +469,7 @@
               <img src="${p.imageUrl}" class="w-full h-36 object-cover rounded-xl border">
               <div class="space-y-1 text-xs text-gray-500">
                 <p><strong>รองประธาน:</strong> ${p.deputy}</p>
-                <div class="bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-xl mt-1">
+                <div class="bg-gray-50 p-2.5 rounded-xl mt-1">
                   <p class="font-semibold text-[11px]">นโยบายสำคัญ:</p>
                   <p class="text-[10px] mt-0.5">${p.policy}</p>
                 </div>
@@ -716,12 +490,12 @@
     function confirmVote(candidateNo) {
       let label = candidateNo === '0' ? 'ไม่ประสงค์ลงคะแนนเสียง' : 'หมายเลขสมัครเบอร์ ' + candidateNo;
       Swal.fire({
-        title: 'ยืนยันส่งข้อมูลบัตรลงคะแนน?',
+        title: 'ยืนยันลงทะเบียน?',
         text: `คุณยืนยันที่จะเลือก "${label}" ใช่หรือไม่?`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#1E88E5',
-        confirmButtonText: 'ยืนยันสิทธิ์',
+        confirmButtonText: 'ยืนยัน',
         cancelButtonText: 'ยกเลิก'
       }).then((result) => {
         if (result.isConfirmed) {
@@ -731,7 +505,7 @@
     }
 
     function sendVoteToServer(candidateNo) {
-      Swal.fire({ title: 'กำลังประมวลผลคะแนนเสียง...', didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({ title: 'กำลังบันทึกคะแนน...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
       const info = window.navigator.userAgent.substring(0, 45);
 
       apiFetch(BACKEND_URL, {
@@ -745,12 +519,12 @@
       }).then(res => {
         Swal.close();
         if (res.success) {
-          Swal.fire('สำเร็จ', 'บันทึกคะแนนโหวตสำเร็จเรียบร้อยแล้ว', 'success').then(() => {
+          Swal.fire('ลงคะแนนเสร็จสิ้น', 'ขอบคุณสำหรับการมีส่วนร่วมและปฏิบัติหน้าที่การเลือกตั้ง', 'success').then(() => {
             logoutVotingSession();
             fetchDashboardData();
           });
         } else {
-          Swal.fire('ล้มเหลว', res.message, 'error');
+          Swal.fire('ข้อผิดพลาด', res.message, 'error');
         }
       });
     }
@@ -761,7 +535,7 @@
     }
 
     function generateAndPrintQRCodes() {
-      Swal.fire({ title: 'กำลังดึงฐานข้อมูลจัดทำแผ่นพิมพ์...', didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({ title: 'กำลังดึงฐานข้อมูลรายชื่อ...', didOpen: () => { Swal.showLoading(); } });
       
       apiFetch(`${BACKEND_URL}?action=getStudentsList`)
         .then(students => {
@@ -898,21 +672,21 @@
 
     function resetSystemPrompt() {
       Swal.fire({
-        title: 'ยืนยันเคลียร์ฐานประวัติเดิม?',
-        text: "เมื่อรีเซ็ต คะแนนเสียงและประวัติทั้งหมดจะถูกล้างค่าเริ่มใหม่ทั้งหมด",
+        title: 'คุณต้องการล้างข้อมูลเพื่อเริ่มรอบใหม่?',
+        text: "การดำเนินการนี้ไม่สามารถยกเลิกได้ ประวัติลงทะเบียนและสิทธิ์ผู้ใช้งานจะถูกรีเซ็ตทั้งหมด",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         confirmButtonText: 'ล้างข้อมูลทั้งหมด'
       }).then((result) => {
         if (result.isConfirmed) {
-          Swal.fire({ title: 'กำลังติดต่อระบบหลังบ้านเพื่อล้างข้อมูล...', didOpen: () => { Swal.showLoading(); } });
+          Swal.fire({ title: 'กำลังส่งคำร้องขอรีเซ็ต...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
           apiFetch(BACKEND_URL, {
             method: 'POST',
             body: JSON.stringify({ action: "resetVotes" })
           }).then(() => {
             Swal.close();
-            Swal.fire('เสร็จสิ้น', 'รีเซ็ตฐานข้อมูลพร้อมจัดสรรงานใหม่', 'success').then(() => {
+            Swal.fire('เสร็จสิ้น', 'ระบบได้รับการรีเซ็ตเรียบร้อย', 'success').then(() => {
               fetchDashboardData();
             });
           });
