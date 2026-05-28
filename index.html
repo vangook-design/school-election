@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบเลือกตั้งประธานนักเรียนออนไลน์ - Vercel</title>
+  
+  <!-- CSS & JS Libraries via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <!-- Html5Qrcode (สำหรับวิเคราะห์ QR ผ่านกล้อง/รูปภาพได้บน Safari และ Chrome) -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sarabun: ['Sarabun', 'sans-serif'] },
+          colors: {
+            primary: {
+              DEFAULT: '#1E88E5',
+              dark: '#1565C0',
+              light: '#E3F2FD'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; transition: background-color 0.3s, color 0.3s; }
+    .custom-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 10px -1px rgba(0, 0, 0, 0.03); }
+    @keyframes pulse-glow {
+      0% { transform: scale(0.98); opacity: 0.9; }
+      50% { transform: scale(1.02); opacity: 1; }
+      100% { transform: scale(0.98); opacity: 0.9; }
+    }
+    .voting-btn-glow { animation: pulse-glow 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+
+  <script>
+    // *** สำคัญมาก: กรุณานำ URL Web App ที่ได้จาก Google Apps Script มาใส่ตรงนี้ ***
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycby51yQj8VkJSv4O-_kWn4qhmhY7-J3sJk9Sgez7ZKgjUa1Ivj9d2oRUS9VDHMvSfgY-/exec";
+  </script>
+
+  <!-- Navigation bar -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-b border-gray-100 dark:border-gray-700 py-3 px-4 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-primary text-white p-2 rounded-xl flex items-center justify-center shadow-md">
+          <span class="material-icons">how_to_reg</span>
+        </div>
+        <div>
+          <h1 class="font-bold text-base md:text-lg leading-tight text-primary">ระบบเลือกตั้งประธานนักเรียน</h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400">REST API & Vercel Platform</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <button onclick="openQRScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center space-x-1 shadow-sm transition">
+          <span class="material-icons text-sm">qr_code_scanner</span>
+          <span>สแกน QR-Code (สำหรับครู)</span>
+        </button>
+        <button onclick="toggleDarkMode()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition">
+          <span id="dark-mode-icon" class="material-icons text-sm block">dark_mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- รายงานผลสถิติการใช้งานด้านบน -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-gray-500 uppercase">เปอร์เซ็นต์นักเรียนที่ประมวลผลสิทธิ์แล้ว</span>
+          <span class="material-icons text-primary text-lg">donut_large</span>
+        </div>
+        <div class="my-2">
+          <span id="stat-percent" class="text-3xl font-bold">0.0%</span>
+        </div>
+        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+          <div id="stat-progress-bar" class="bg-primary h-2 rounded-full transition-all duration-1000" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-gray-500 uppercase">มาใช้สิทธิ์เลือกตั้งจริง</span>
+          <span class="material-icons text-green-500 text-lg">check_circle</span>
+        </div>
+        <div class="my-2">
+          <span id="stat-voted" class="text-3xl font-bold text-green-600">0</span>
+          <span class="text-xs text-gray-400 ml-1">คน</span>
+        </div>
+        <p class="text-[10px] text-gray-400">จากผู้มีสิทธิ์ทั้งหมด <span id="stat-total">0</span> คน</p>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-gray-500 uppercase">สถานะนักเรียนคงค้าง</span>
+          <span class="material-icons text-amber-500 text-lg">pending_actions</span>
+        </div>
+        <div class="my-2">
+          <span id="stat-pending" class="text-3xl font-bold text-amber-500">0</span>
+          <span class="text-xs text-gray-400 ml-1">คน</span>
+        </div>
+        <p class="text-[10px] text-gray-400">ไม่มาใช้สิทธิ์ (ระบุเหตุผลแล้ว): <span id="stat-absent" class="font-semibold">0</span> คน</p>
+      </div>
+    </div>
+
+    <!-- ปุ่มสำหรับกดเข้าสู่การใช้สิทธิ์ของนักเรียน -->
+    <div id="action-panel" class="bg-white dark:bg-gray-800 border-2 border-primary/20 rounded-3xl p-10 text-center max-w-2xl mx-auto custom-shadow relative overflow-hidden my-8">
+      <div class="absolute -top-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
+      <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
+
+      <div class="relative z-10 space-y-4">
+        <h3 class="font-bold text-xl md:text-2xl text-gray-800 dark:text-white">
+          ลงคะแนนเสียงประธานนักเรียนออนไลน์
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          โปรดตรวจสอบความพร้อมและยืนยันรหัสประจำตัวของท่านผ่านทางบัตรคิวสิทธิ์เพื่อดำเนินการลงคะแนนเสียง
+        </p>
+        
+        <div class="pt-4 pb-2">
+          <button onclick="openLoginModal()" class="voting-btn-glow relative inline-flex items-center justify-center p-0.5 mb-2 overflow-hidden text-lg font-bold text-white rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 transform hover:scale-[1.05] transition-all duration-300 shadow-2xl shadow-blue-500/40">
+            <span class="relative px-12 py-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center space-x-3 text-xl md:text-2xl">
+              <span class="material-icons text-2xl md:text-3xl">how_to_vote</span>
+              <span>กดเพื่อเข้าสู่ระบบลงคะแนน</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- บล็อกแสดงรายงานคะแนน (จะปลดล็อกเมื่อข้อมูลนักเรียนครบ 100% เท่านั้น) -->
+    <div id="results-lock-section" class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 p-8 rounded-2xl text-center">
+      <span class="material-icons text-4xl text-amber-500 animate-bounce">lock</span>
+      <h4 class="font-bold text-lg mt-2 text-amber-800 dark:text-amber-400">สรุปคะแนนโหวตถูกระงับชั่วคราว</h4>
+      <p class="text-sm text-amber-600 dark:text-amber-300 max-w-lg mx-auto mt-1">
+        ผลสรุปผลคะแนนเลือกตั้งเรียลไทม์จะถูกแสดงและรายงานทันทีเมื่อนักเรียนทุกคนแสดงตนครบ 100% (นับยอดลงคะแนนจริงรวมกับนักเรียนที่ครูบันทึกสาเหตุที่ขาดเรียนแล้ว)
+      </p>
+    </div>
+
+    <div id="results-unlocked-section" class="hidden space-y-6">
+      <div class="bg-emerald-100 dark:bg-emerald-950/40 border-l-4 border-emerald-500 p-4 rounded-xl text-emerald-800 dark:text-emerald-200">
+        <div class="flex items-center">
+          <span class="material-icons mr-2">check_circle</span>
+          <span class="font-bold">ตรวจสอบข้อมูลนักเรียนครบ 100% แล้ว ปลดล็อกรายงานผลคะแนนอย่างเป็นทางการ</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 lg:col-span-1">
+          <h3 class="font-bold text-base mb-4 flex items-center">
+            <span class="material-icons text-amber-500 mr-2">emoji_events</span>
+            อันดับคะแนนผู้สมัคร
+          </h3>
+          <div id="leaderboard-list" class="space-y-3"></div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl custom-shadow border border-gray-100 lg:col-span-2 space-y-6">
+          <h3 class="font-bold text-base flex items-center text-primary">
+            <span class="material-icons mr-2">analytics</span>
+            กราฟรายงานผลคะแนนอย่างเป็นทางการ
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="h-60"><canvas id="barChart"></canvas></div>
+            <div class="h-60"><canvas id="pieChart"></canvas></div>
+          </div>
+          <div class="h-44 pt-4 border-t border-gray-100"><canvas id="lineChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- เมนูของคุณครูสำหรับจัดพิมพ์สิทธิ์ และ Reset ข้อมูล -->
+    <div class="flex flex-wrap gap-2 justify-between items-center bg-gray-100 dark:bg-gray-800/40 p-4 rounded-2xl">
+      <div class="flex items-center space-x-1 text-xs text-gray-500">
+        <span class="material-icons text-sm">settings</span>
+        <span>ระบบจัดการสำหรับผู้ดูแลระบบและคุณครู</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="generateAndPrintQRCodes()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs py-2 px-4 rounded-lg flex items-center space-x-1 transition shadow-sm">
+          <span class="material-icons text-xs">print</span>
+          <span>สร้าง/พิมพ์ รายงานสิทธิ์ QR Code</span>
+        </button>
+        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2 px-4 rounded-lg flex items-center space-x-1 transition shadow-sm">
+          <span class="material-icons text-xs">download</span>
+          <span>ส่งออก Excel</span>
+        </button>
+        <button onclick="resetSystemPrompt()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs py-2 px-4 rounded-lg flex items-center space-x-1 transition shadow-sm">
+          <span class="material-icons text-xs">restart_alt</span>
+          <span>รีเซ็ตระบบ</span>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal สำหรับสแกน QR-Code ด้วยกล้องถ่ายรูปมือถือ/แท็บเล็ต -->
+  <div id="qr-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+    <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/80 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full custom-shadow border border-gray-100 relative">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-bold flex items-center text-emerald-600">
+            <span class="material-icons mr-1">qr_code_scanner</span>
+            สแกนตรวจสอบสิทธิ์ (Safari & Chrome)
+          </h2>
+          <button onclick="closeQRScanner()" class="text-gray-400 hover:text-gray-600">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        
+        <p class="text-xs text-gray-500 mb-4">ระบบรองรับการเปิดกล้อง หากไม่สามารถเข้าถึงกล้องได้ ให้กดเลือกเมนูอัปโหลดภาพแทน</p>
+        
+        <!-- ขอบเขตแสดงกล้องวิดีโอ -->
+        <div class="overflow-hidden rounded-2xl bg-black aspect-square max-w-xs mx-auto mb-4 border-2 border-primary relative">
+          <div id="qr-reader" class="w-full h-full"></div>
+        </div>
+        
+        <!-- ส่วนอัปโหลดรูปภาพทางเลือก (Fallback) เมื่อเปิดกล้องจริงไม่ได้ -->
+        <div class="mt-4 mb-2">
+          <label class="w-full bg-emerald-50 text-emerald-700 border border-emerald-300 rounded-xl py-3 px-4 flex items-center justify-center space-x-2 cursor-pointer font-bold hover:bg-emerald-100 transition text-sm">
+            <span class="material-icons text-lg">add_a_photo</span>
+            <span>ถ่ายภาพ หรือ อัปโหลดภาพ QR-code</span>
+            <input type="file" id="qr-file-input" accept="image/*" class="hidden" onchange="scanFromUploadedFile(this)">
+          </label>
+        </div>
+
+        <div class="text-center text-xs text-rose-500 font-semibold mt-2" id="qr-scan-result">
+          กำลังรอสัญญาณภาพ...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal สำหรับตรวจสอบสิทธิ์นักเรียน -->
+  <div id="login-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+    <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/60 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full border border-gray-100">
+        <div class="flex justify-between items-start mb-6">
+          <h2 class="text-base font-bold flex items-center text-primary">
+            <span class="material-icons mr-2">verified_user</span>
+            ยืนยันสิทธิ์นักเรียนเพื่อเข้าโหวต
+          </h2>
+          <button onclick="closeLoginModal()" class="text-gray-400 hover:text-gray-600">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold mb-1 text-gray-500 uppercase">รหัสประจำตัวนักเรียน</label>
+            <input id="student-id-input" type="text" required placeholder="ตัวอย่าง: STD001" class="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-center text-lg font-semibold uppercase dark:bg-gray-700">
+          </div>
+          <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition">
+            เข้าสู่หน้าบัตรลงคะแนน
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- บัตรลงคะแนนเลือกตั้ง -->
+  <div id="voting-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+    <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+      <div class="max-w-5xl mx-auto space-y-6">
+        
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl custom-shadow flex items-center justify-between border border-gray-100">
+          <div class="flex items-center space-x-3">
+            <div class="bg-primary/10 text-primary p-2 rounded-full"><span class="material-icons">account_circle</span></div>
+            <div>
+              <p class="text-[10px] text-gray-500">ลงทะเบียนสิทธิ์:</p>
+              <h4 class="font-bold text-sm"><span id="user-info-name"></span> (<span id="user-info-class"></span>)</h4>
+            </div>
+          </div>
+          <button onclick="logoutVotingSession()" class="text-red-500 hover:text-red-700 text-xs font-semibold bg-red-50 p-2 rounded-lg">
+            <span>ออกจากระบบ</span>
+          </button>
+        </div>
+
+        <div id="candidates-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 py-4"></div>
+
+        <div class="flex justify-center py-4">
+          <button onclick="confirmVote('0')" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-100 font-bold py-3 px-12 rounded-2xl flex items-center space-x-2">
+            <span class="material-icons">block</span>
+            <span>ไม่ประสงค์ลงคะแนนเสียง</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentData = null;
+    let barChart = null;
+    let pieChart = null;
+    let lineChart = null;
+    let currentUserSession = null;
+    let html5QrcodeScanner = null;
+
+    function toggleDarkMode() {
+      const html = document.documentElement;
+      const icon = document.getElementById('dark-mode-icon');
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        icon.innerText = 'dark_mode';
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.classList.add('dark');
+        icon.innerText = 'light_mode';
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+
+    // ฟังก์ชันสื่อสารด้วยการ Fetch ไปยังหลังบ้าน (แทน google.script.run)
+    async function apiFetch(url, params = {}) {
+      try {
+        const response = await fetch(url, params);
+        return await response.json();
+      } catch (err) {
+        console.error("API Fetch Error: ", err);
+        throw err;
+      }
+    }
+
+    // ดึงข้อมูลหลักจากหลังบ้านมาประมวลผล
+    function fetchDashboardData() {
+      apiFetch(`${BACKEND_URL}?action=getDashboardData`)
+        .then(data => {
+          if (!data || !data.success) {
+            Swal.fire('การกำหนดค่าไม่ถูกต้อง', data.error || 'กรุณาตรวจสอบ URL หรือสิทธิ์การเข้าใช้งานชีต', 'error');
+            return;
+          }
+          currentData = data;
+          updateDashboardUI(data);
+          if (data.isCompleted) {
+            document.getElementById('results-lock-section').classList.add('hidden');
+            document.getElementById('results-unlocked-section').classList.remove('hidden');
+            setTimeout(() => { updateCharts(data); }, 100);
+          } else {
+            document.getElementById('results-lock-section').classList.remove('hidden');
+            document.getElementById('results-unlocked-section').classList.add('hidden');
+          }
+        })
+        .catch(err => {
+          Swal.fire('ข้อผิดพลาดการเชื่อมต่อ', 'ไม่สามารถเชื่อมต่อหลังบ้านได้ กรุณาตรวจสอบ CORS / ลิงก์ API', 'error');
+        });
+    }
+
+    function updateDashboardUI(data) {
+      document.getElementById('stat-percent').innerText = data.percentVoted + '%';
+      document.getElementById('stat-progress-bar').style.width = data.percentVoted + '%';
+      document.getElementById('stat-voted').innerText = data.votedCount;
+      document.getElementById('stat-total').innerText = data.totalUsers;
+      document.getElementById('stat-absent').innerText = data.absentCount;
+      document.getElementById('stat-pending').innerText = data.pendingCount;
+
+      if (data.isCompleted) {
+        const leaderboardList = document.getElementById('leaderboard-list');
+        leaderboardList.innerHTML = '';
+        data.leaderboard.forEach((party, index) => {
+          const medalColor = index === 0 ? 'text-amber-500' : (index === 1 ? 'text-slate-400' : 'text-amber-700');
+          const rankMedal = index < 3 ? `<span class="material-icons ${medalColor}">emoji_events</span>` : `<span class="font-bold text-gray-500 w-6 text-center">${index + 1}</span>`;
+          leaderboardList.innerHTML += `
+            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/40 rounded-xl">
+              <div class="flex items-center space-x-3 truncate">
+                ${rankMedal}
+                <div class="truncate">
+                  <p class="font-bold text-sm truncate">เบอร์ ${party.no} ${party.partyName}</p>
+                  <p class="text-xs text-gray-400 truncate">${party.leader}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="font-bold text-base text-primary block">${party.votes}</span>
+                <span class="text-[10px] text-gray-400">คะแนน</span>
+              </div>
+            </div>
+          `;
+        });
+      }
+    }
+
+    // เปิดระบบสแกน QR Code พร้อมตรวจสอบ Permission
+    async function openQRScanner() {
+      document.getElementById('qr-modal').classList.remove('hidden');
+      document.getElementById('qr-scan-result').innerText = "กำลังสแกนกล้องสด...";
+      
+      try {
+        // ตรวจสอบสิทธิ์การเข้าใช้งานกล้อง (Camera Permission check)
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop()); // ปิดสตรีมทดสอบเพื่อคืนทรัพยากรระบบ
+
+        html5QrcodeScanner = new Html5Qrcode("qr-reader");
+        html5QrcodeScanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 220 },
+          onScanSuccess,
+          onScanFailure
+        ).catch(err => {
+          showCameraFallbackMessage();
+        });
+      } catch (err) {
+        showCameraFallbackMessage();
+      }
+    }
+
+    function showCameraFallbackMessage() {
+      document.getElementById('qr-scan-result').innerHTML = 
+        "<span class='text-amber-600 font-semibold'>เบราว์เซอร์ไม่สามารถเริ่มทำงานระบบกล้องได้<br>โปรดแตะปุ่มเพื่ออัปโหลดไฟล์ภาพแทน</span>";
+    }
+
+    function closeQRScanner() {
+      document.getElementById('qr-modal').classList.add('hidden');
+      document.getElementById('qr-file-input').value = "";
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+          html5QrcodeScanner = null;
+        }).catch(err => console.error(err));
+      }
+    }
+
+    // การแสกนผ่านการนำเข้ารูปภาพ (Fallback)
+    function scanFromUploadedFile(input) {
+      if (input.files && input.files[0]) {
+        const file = input.files[0];
+        document.getElementById('qr-scan-result').innerText = "กำลังวิเคราะห์โครงสร้างพิกเซลในรูปภาพ...";
+        
+        const tempScanner = new Html5Qrcode("qr-reader");
+        tempScanner.scanFile(file, true)
+          .then(decodedText => {
+            onScanSuccess(decodedText, null);
+          })
+          .catch(err => {
+            Swal.fire('ไม่สำเร็จ', 'ไม่พบโค้ดในรูปภาพ กรุณาตรวจสอบว่าความละเอียดภาพชัดเจนเพียงพอ', 'error');
+            document.getElementById('qr-scan-result').innerText = "ล้มเหลว: ถ่ายภาพไม่ชัดเจน";
+          });
+      }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      closeQRScanner();
+      const studentId = decodedText.trim();
+      
+      Swal.fire({
+        title: 'ระบบตรวจสอบข้อมูลสิทธิ์',
+        text: `รหัสประจำตัวที่ตรวจพบ: ${studentId}`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#1E88E5',
+        confirmButtonText: 'บันทึก: ไม่มาใช้สิทธิ์ (ขาดเรียน)',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({
+            title: 'ระบุสาเหตุการขาดเรียน',
+            input: 'text',
+            inputPlaceholder: 'ตัวอย่าง: ลาป่วย, ขาดเรียน, ไปกิจกรรมภายนอก',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันการบันทึก',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: (value) => {
+              if (!value) {
+                Swal.showValidationMessage('จำเป็นต้องใส่ข้อมูลรายละเอียดเพื่อลงบันทึก');
+              }
+              return value;
+            }
+          }).then((inputRes) => {
+            if (inputRes.isConfirmed) {
+              Swal.fire({ title: 'กำลังบันทึกข้อมูล...', didOpen: () => { Swal.showLoading(); } });
+              
+              apiFetch(BACKEND_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                  action: "markAbsent",
+                  studentId: studentId,
+                  reason: inputRes.value
+                })
+              }).then(response => {
+                Swal.close();
+                if (response.success) {
+                  Swal.fire('บันทึกสำเร็จ', `ปรับปรุงสถานะของนักเรียนเรียบร้อยแล้ว`, 'success');
+                  fetchDashboardData();
+                } else {
+                  Swal.fire('ล้มเหลว', response.message, 'error');
+                }
+              }).catch(err => {
+                Swal.close();
+                Swal.fire('ระบบขัดข้อง', 'ไม่สามารถเชื่อมต่อเครือข่ายได้', 'error');
+              });
+            }
+          });
+        }
+      });
+    }
+
+    function onScanFailure(error) {
+      // ข้าม Log เพื่อไม่ให้ขัดจังหวะภาพวิดีโอ
+    }
+
+    function generateAndPrintQRCodes() {
+      Swal.fire({ title: 'กำลังดาวน์โหลดข้อมูลรายชื่อ...', didOpen: () => { Swal.showLoading(); } });
+      
+      apiFetch(`${BACKEND_URL}?action=getStudentsList`)
+        .then(students => {
+          Swal.close();
+          let htmlContent = `
+            <html>
+            <head>
+              <title>พิมพ์สิทธิ์ QR-Code ประจำตัวนักเรียน</title>
+              <style>
+                body { font-family: 'Sarabun', sans-serif; padding: 20px; text-align: center; background-color: #f9f9f9; }
+                .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+                .card { border: 2px solid #e2e8f0; padding: 15px; border-radius: 12px; text-align: center; background: #fff; }
+                .name { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #1e293b; }
+                .class { font-size: 11px; color: #64748b; margin-bottom: 8px; }
+                .qr { width: 120px; height: 120px; margin: 5px auto; display: block; }
+              </style>
+            </head>
+            <body>
+              <h2 style="color: #1e88e5; margin-bottom: 25px;">พิมพ์แผ่นสิทธิ์ QR Code สำหรับแสดงตัวตน</h2>
+              <div class="grid">
+          `;
+
+          students.forEach(std => {
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${std.studentId}`;
+            htmlContent += `
+              <div class="card">
+                <div class="name">${std.name}</div>
+                <div class="class">ห้องเรียน: ${std.className}</div>
+                <img class="qr" src="${qrUrl}" alt="QR Code">
+                <div style="font-size: 10px; color: #94a3b8; margin-top: 5px; font-weight: bold;">ID: ${std.studentId}</div>
+              </div>
+            `;
+          });
+
+          htmlContent += `
+              </div>
+              <script>
+                window.onload = function() { window.print(); }
+              <\/script>
+            </body>
+            </html>
+          `;
+
+          const printWindow = window.open("", "_blank");
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+        });
+    }
+
+    function updateCharts(data) {
+      const labels = data.parties.map(p => 'เบอร์ ' + p.no + ' ' + p.partyName);
+      const votes = data.parties.map(p => p.votes);
+      const secondaryColors = ['#1E88E5', '#F57C00', '#388E3C', '#7B1FA2', '#E53935'];
+
+      if (!barChart) {
+        const ctxBar = document.getElementById('barChart').getContext('2d');
+        barChart = new Chart(ctxBar, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: votes,
+              backgroundColor: secondaryColors.slice(0, labels.length),
+              borderRadius: 8
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+      } else {
+        barChart.data.labels = labels;
+        barChart.data.datasets[0].data = votes;
+        barChart.update();
+      }
+
+      if (!pieChart) {
+        const ctxPie = document.getElementById('pieChart').getContext('2d');
+        pieChart = new Chart(ctxPie, {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{ data: votes, backgroundColor: secondaryColors.slice(0, labels.length) }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      } else {
+        pieChart.data.labels = labels;
+        pieChart.data.datasets[0].data = votes;
+        pieChart.update();
+      }
+
+      const sortedTimes = Object.keys(data.timeline).sort();
+      const lineDataValues = sortedTimes.map(t => data.timeline[t]);
+      
+      if (!lineChart) {
+        const ctxLine = document.getElementById('lineChart').getContext('2d');
+        lineChart = new Chart(ctxLine, {
+          type: 'line',
+          data: {
+            labels: sortedTimes.length > 0 ? sortedTimes : ["เริ่มระบบ"],
+            datasets: [{
+              label: 'ความคืบหน้าการโหวตสะสม',
+              data: lineDataValues.length > 0 ? lineDataValues : [0],
+              borderColor: '#1E88E5',
+              backgroundColor: 'rgba(30, 136, 229, 0.1)',
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      } else {
+        lineChart.data.labels = sortedTimes.length > 0 ? sortedTimes : ["เริ่มระบบ"];
+        lineChart.data.datasets[0].data = lineDataValues.length > 0 ? lineDataValues : [0];
+        lineChart.update();
+      }
+    }
+
+    function openLoginModal() {
+      document.getElementById('login-modal').classList.remove('hidden');
+    }
+    
+    function closeLoginModal() {
+      document.getElementById('login-modal').classList.add('hidden');
+      document.getElementById('student-id-input').value = '';
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const studentId = document.getElementById('student-id-input').value.trim();
+      if (!studentId) return;
+
+      Swal.fire({ title: 'กำลังยืนยันฐานข้อมูลสิทธิ์...', didOpen: () => { Swal.showLoading(); } });
+
+      apiFetch(BACKEND_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: "authenticateUser",
+          studentId: studentId
+        })
+      }).then(response => {
+        Swal.close();
+        if (response.success) {
+          if (response.hasVoted) {
+            Swal.fire('ทำรายการโหวตแล้ว', 'รหัสสิทธิ์นี้ทำรายการเรียบร้อยแล้ว', 'warning');
+          } else {
+            currentUserSession = response;
+            closeLoginModal();
+            openVotingInterface(response);
+          }
+        } else {
+          Swal.fire('ปฏิเสธการสิทธิ์', response.message, 'error');
+        }
+      }).catch(() => {
+        Swal.close();
+        Swal.fire('ล้มเหลว', 'การลงทะเบียนสิทธิ์ขัดข้อง', 'error');
+      });
+    }
+
+    function openVotingInterface(user) {
+      document.getElementById('user-info-name').innerText = user.name;
+      document.getElementById('user-info-class').innerText = user.className;
+      
+      const grid = document.getElementById('candidates-grid');
+      grid.innerHTML = '';
+      
+      currentData.parties.forEach(p => {
+        grid.innerHTML += `
+          <div class="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden custom-shadow border border-gray-100 flex flex-col justify-between">
+            <div class="p-6 space-y-4">
+              <div class="flex items-center space-x-4">
+                <div class="w-14 h-14 bg-primary text-white text-2xl font-extrabold flex items-center justify-center rounded-2xl flex-shrink-0">
+                  ${p.no}
+                </div>
+                <div>
+                  <h3 class="font-bold text-base text-primary">${p.partyName}</h3>
+                  <p class="text-xs text-gray-400">สมัครประธาน: ${p.leader}</p>
+                </div>
+              </div>
+              <img src="${p.imageUrl}" class="w-full h-36 object-cover rounded-xl border">
+              <div class="space-y-1 text-xs text-gray-500">
+                <p><strong>รองประธาน:</strong> ${p.deputy}</p>
+                <div class="bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-xl mt-1">
+                  <p class="font-semibold text-[11px]">นโยบายสำคัญ:</p>
+                  <p class="text-[10px] mt-0.5">${p.policy}</p>
+                </div>
+              </div>
+            </div>
+            <div class="p-4 bg-gray-50/50 border-t">
+              <button onclick="confirmVote('${p.no}')" class="w-full bg-primary text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center space-x-1">
+                <span class="material-icons text-sm">how_to_vote</span>
+                <span>ลงคะแนนเบอร์ ${p.no}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('voting-modal').classList.remove('hidden');
+    }
+
+    function confirmVote(candidateNo) {
+      let label = candidateNo === '0' ? 'ไม่ประสงค์ลงคะแนนเสียง' : 'หมายเลขสมัครเบอร์ ' + candidateNo;
+      Swal.fire({
+        title: 'ยืนยันลงทะเบียน?',
+        text: `คุณยืนยันที่จะโหวตให้กับ "${label}" ใช่หรือไม่?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#1E88E5',
+        confirmButtonText: 'ยืนยัน',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          sendVoteToServer(candidateNo);
+        }
+      });
+    }
+
+    function sendVoteToServer(candidateNo) {
+      Swal.fire({ title: 'กำลังประมวลผลข้อมูล...', didOpen: () => { Swal.showLoading(); } });
+      const info = window.navigator.userAgent.substring(0, 45);
+
+      apiFetch(BACKEND_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: "submitVote",
+          studentId: currentUserSession.studentId,
+          candidateNo: candidateNo,
+          deviceInfo: info
+        })
+      }).then(res => {
+        Swal.close();
+        if (res.success) {
+          Swal.fire('ลงคะแนนเสร็จสิ้น', 'ขอบคุณสำหรับการมีส่วนร่วม', 'success').then(() => {
+            logoutVotingSession();
+            fetchDashboardData();
+          });
+        } else {
+          Swal.fire('ข้อผิดพลาด', res.message, 'error');
+        }
+      });
+    }
+
+    function logoutVotingSession() {
+      currentUserSession = null;
+      document.getElementById('voting-modal').classList.add('hidden');
+    }
+
+    function exportToExcel() {
+      if (!currentData || !currentData.isCompleted) {
+        Swal.fire('ปิดกั้นการเข้าสิทธิ์', 'ไม่สามารถสร้างรายงาน Excel ได้จนกว่านักเรียนจะลงประมวลผลครบ 100%', 'warning');
+        return;
+      }
+      const dataToExport = currentData.parties.map(p => ({
+        "หมายเลขสมัคร": p.no,
+        "ชื่อพรรค": p.partyName,
+        "ผู้สมัครประธาน": p.leader,
+        "คะแนนโหวตโพลสะสม": p.votes
+      }));
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "สรุปผลเลือกตั้ง");
+      XLSX.writeFile(wb, "Student_Election_Results.xlsx");
+    }
+
+    function resetSystemPrompt() {
+      Swal.fire({
+        title: 'คุณต้องการล้างข้อมูลเพื่อเริ่มรอบใหม่?',
+        text: "การดำเนินการนี้ไม่สามารถยกเลิกได้ ประวัติลงทะเบียนและสิทธิ์ผู้ใช้งานจะถูกรีเซ็ตทั้งหมด",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'ล้างข้อมูลทั้งหมด'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({ title: 'กำลังดำเนินการหลังบ้าน...', didOpen: () => { Swal.showLoading(); } });
+          apiFetch(BACKEND_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "resetVotes" })
+          }).then(() => {
+            Swal.close();
+            Swal.fire('เสร็จสิ้น', 'ระบบได้รับการรีเซ็ตเรียบร้อย', 'success').then(() => {
+              fetchDashboardData();
+            });
+          });
+        }
+      });
+    }
+
+    window.onload = function() {
+      fetchDashboardData();
+    };
+  </script>
+</body>
+</html>
