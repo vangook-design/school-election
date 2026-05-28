@@ -13,7 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
-  <!-- Html5Qrcode (สำหรับประมวลผล QR-Code ได้บน Safari และ Chrome) -->
+  <!-- Html5Qrcode (สำหรับวิเคราะห์ QR-Code บนสมาร์ตโฟน) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <script>
@@ -228,7 +228,7 @@
           <div id="voter-qr-reader" class="w-full h-full"></div>
         </div>
         
-        <!-- ระบบFallback 1: แสกนผ่านการนำเข้ารูปภาพ -->
+        <!-- แถบอัปโหลดไฟล์ภาพ -->
         <div class="mb-4">
           <label class="w-full bg-blue-50 text-blue-700 border border-blue-200 rounded-xl py-2.5 px-4 flex items-center justify-center space-x-2 cursor-pointer font-bold hover:bg-blue-100 transition text-xs">
             <span class="material-icons text-sm">add_a_photo</span>
@@ -239,7 +239,7 @@
 
         <hr class="border-gray-100 dark:border-gray-700 my-3" />
 
-        <!-- ระบบFallback 2: คีย์รหัสประจำตัวโดยตรง -->
+        <!-- แถบระบุรหัสประจำตัวตรงกรณีกล้องติดขัด -->
         <div class="space-y-2">
           <label class="block text-center text-xs font-semibold text-gray-400 uppercase">มีปัญหาในการสแกน? กรอกรหัสลงคะแนนโดยตรง</label>
           <div class="flex space-x-2">
@@ -330,7 +330,6 @@
     let lineChart = null;
     let currentUserSession = null;
     
-    // แยกสแกนเนอร์เป็น 2 ตัวเพื่อความชัดเจน
     let voterScanner = null;
     let teacherScanner = null;
 
@@ -418,33 +417,42 @@
       }
     }
 
-    // --- ส่วนบริการลงสิทธิ์ของนักเรียนผ่าน QR-Code (Voter Workflow) ---
+    // --- ปรับปรุงระบบสแกนกล้องสดฝั่งนักเรียนลงคะแนนเสียง (Voter QR Scanner) ---
 
-    async function openVoterQRScanner() {
+    function openVoterQRScanner() {
+      // 1. บังคับแสดงผลโมดอลขอบเขตพื้นที่ให้เสร็จสิ้นก่อนเริ่มผูกสคริปต์
       document.getElementById('voter-scan-modal').classList.remove('hidden');
-      document.getElementById('voter-scan-status').innerText = "กำลังเข้าถึงกล้องสแกนเพื่ออ่านข้อมูล...";
+      document.getElementById('voter-scan-status').innerText = "กำลังเชื่อมต่ออินพุตกล้องสด...";
       
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop());
-
-        voterScanner = new Html5Qrcode("voter-qr-reader");
-        voterScanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: 220 },
-          onVoterScanSuccess,
-          onVoterScanFailure
-        ).catch(() => {
+      setTimeout(() => {
+        try {
+          voterScanner = new Html5Qrcode("voter-qr-reader");
+          
+          // สั่งเริ่มกล้องทันทีโดยไม่ต้องตรวจสิทธิ์ล่วงหน้า ป้องกันกล้องค้างคาบล็อกเรซ
+          voterScanner.start(
+            { facingMode: "environment" },
+            { 
+              fps: 10, 
+              qrbox: function(width, height) {
+                return { width: width * 0.7, height: height * 0.7 }; // ขนาดแผงสแกนยืดหยุ่นตามหน้าจอ
+              }
+            },
+            onVoterScanSuccess,
+            onVoterScanFailure
+          ).catch(err => {
+            console.warn("Camera start err:", err);
+            showVoterFallbackMessage();
+          });
+        } catch (err) {
+          console.error("Scanner setup err:", err);
           showVoterFallbackMessage();
-        });
-      } catch (err) {
-        showVoterFallbackMessage();
-      }
+        }
+      }, 150); // ดีเลย์การวาดเฟรม DOM เล็กน้อย
     }
 
     function showVoterFallbackMessage() {
       document.getElementById('voter-scan-status').innerHTML = 
-        "<span class='text-amber-600 font-semibold'>ไม่สามารถเริ่มทำงานระบบกล้องได้<br>โปรดอัปโหลดไฟล์ หรือ ใช้การกรอกเลขรหัสแทน</span>";
+        "<span class='text-amber-600 font-semibold'>ไม่สามารถระบุระบบประมวลผลกล้องสดได้<br>โปรดอัปโหลดไฟล์ หรือกรอกรหัสด้วยคีย์บอร์ดด้านล่าง</span>";
     }
 
     function closeVoterQRScanner() {
@@ -461,7 +469,7 @@
     function scanVoterQRFromFile(input) {
       if (input.files && input.files[0]) {
         const file = input.files[0];
-        document.getElementById('voter-scan-status').innerText = "กำลังวิเคราะห์โครงสร้างพิกเซลในรูปภาพ...";
+        document.getElementById('voter-scan-status').innerText = "กำลังถอดพิกัดข้อมูลรูปภาพไฟล์...";
         
         const tempScanner = new Html5Qrcode("voter-qr-reader");
         tempScanner.scanFile(file, true)
@@ -469,8 +477,8 @@
             onVoterScanSuccess(decodedText);
           })
           .catch(() => {
-            Swal.fire('ตรวจจับล้มเหลว', 'ไม่พบ QR Code ในรูปภาพ กรุณาถ่ายภาพใหม่อีกครั้งให้ชัดขึ้น', 'error');
-            document.getElementById('voter-scan-status').innerText = "ล้มเหลว: ภาพไม่ชัด";
+            Swal.fire('ตรวจจับล้มเหลว', 'ไม่พบ QR Code ในภาพถ่ายหรือภาพเบลอเกินไป', 'error');
+            document.getElementById('voter-scan-status').innerText = "ล้มเหลว: โปรดอัปโหลดใหม่อีกครั้ง";
           });
       }
     }
@@ -478,7 +486,7 @@
     function handleManualLoginSubmit() {
       const studentId = document.getElementById('voter-manual-id').value.trim();
       if (!studentId) {
-        Swal.fire('คำเตือน', 'กรุณาระบุรหัสประจำตัวของท่าน', 'warning');
+        Swal.fire('คำเตือน', 'กรุณาระบุรหัสประจำตัวเพื่อยืนยันตัวตน', 'warning');
         return;
       }
       processVoterAuthentication(studentId);
@@ -491,12 +499,11 @@
     }
 
     function onVoterScanFailure() {
-      // ข้าม Log การรันแอดมินสตรีมกล้อง
+      // ปล่อยข้าม Log การจับความเคลื่อนไหวทั่วไป
     }
 
-    // ฟังก์ชันประมวลผลการยืนยันตัวตน (ไม่ต้องกรอกเลขบัตร มี popup แสดงรายชื่อ)
     function processVoterAuthentication(studentId) {
-      Swal.fire({ title: 'กำลังยืนยันข้อมูลรายชื่อ...', didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({ title: 'กำลังดึงฐานข้อมูลสิทธิ์...', didOpen: () => { Swal.showLoading(); } });
 
       apiFetch(BACKEND_URL, {
         method: 'POST',
@@ -508,24 +515,23 @@
         Swal.close();
         if (response.success) {
           if (response.hasVoted) {
-            Swal.fire('ทำรายการแล้ว', 'รหัสประจำตัวนี้นักเรียนได้รับการประมวลสิทธิ์โหวตสำเร็จเรียบร้อยแล้ว', 'warning');
+            Swal.fire('ทำรายการแล้ว', 'รหัสประจำตัวนี้ได้ทำรายการลงทะเบียนเลือกตั้งสมบูรณ์แล้ว', 'warning');
           } else {
-            // ดึงรายชื่อขึ้นจอให้กดยอมรับ "ตกลง" เพื่อเข้าบัตรเลือกตั้ง
             Swal.fire({
               title: 'ยืนยันแสดงตนผู้ใช้สิทธิ์',
               html: `
-                <div class="text-left bg-gray-50 p-4 rounded-xl space-y-2 text-sm">
+                <div class="text-left bg-gray-50 p-4 rounded-xl space-y-2 text-sm text-gray-700">
                   <p><strong>ชื่อ-นามสกุล:</strong> ${response.name}</p>
                   <p><strong>ชั้นเรียน:</strong> ${response.className}</p>
                   <p><strong>รหัสประจำตัว:</strong> ${response.studentId}</p>
                 </div>
-                <p class="text-xs text-rose-500 mt-3 font-semibold">* ตรวจสอบว่านี่คือข้อมูลของท่านก่อนกดยืนยัน</p>
+                <p class="text-xs text-rose-500 mt-3 font-semibold">* ตรวจสอบว่าข้อมูลตรงกับตัวท่านก่อนกดยืนยัน</p>
               `,
               icon: 'question',
               showCancelButton: true,
               confirmButtonColor: '#1E88E5',
-              confirmButtonText: 'ตกลง (เข้าสู่บัตรลงคะแนน)',
-              cancelButtonText: 'ไม่ใช่ตัวฉัน (ยกเลิก)'
+              confirmButtonText: 'ตกลง (เข้าสู่หน้าโหวต)',
+              cancelButtonText: 'ยกเลิก'
             }).then((result) => {
               if (result.isConfirmed) {
                 currentUserSession = response;
@@ -538,38 +544,45 @@
         }
       }).catch(() => {
         Swal.close();
-        Swal.fire('ระบบขัดข้อง', 'การประสานข้อมูลล้มเหลว', 'error');
+        Swal.fire('ระบบขัดข้อง', 'การตรวจสอบสิทธิ์เครือข่ายล้มเหลว', 'error');
       });
     }
 
 
-    // --- ส่วนบันทึกประวัติการขาดเรียนโดยคุณครู (Teacher Workflow) ---
+    // --- ปรับปรุงระบบสแกนบันทึกสถานะผู้ขาดเรียน (Teacher QR Scanner) ---
 
-    async function openTeacherQRScanner() {
+    function openTeacherQRScanner() {
       document.getElementById('teacher-scan-modal').classList.remove('hidden');
-      document.getElementById('teacher-scan-status').innerText = "กำลังเปิดทำงานระบบกล้อง...";
+      document.getElementById('teacher-scan-status').innerText = "กำลังเชื่อมต่อกล้องสด...";
       
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop());
-
-        teacherScanner = new Html5Qrcode("teacher-qr-reader");
-        teacherScanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: 220 },
-          onTeacherScanSuccess,
-          onTeacherScanFailure
-        ).catch(() => {
+      setTimeout(() => {
+        try {
+          teacherScanner = new Html5Qrcode("teacher-qr-reader");
+          
+          teacherScanner.start(
+            { facingMode: "environment" },
+            { 
+              fps: 10, 
+              qrbox: function(width, height) {
+                return { width: width * 0.7, height: height * 0.7 };
+              }
+            },
+            onTeacherScanSuccess,
+            onTeacherScanFailure
+          ).catch(err => {
+            console.warn("Teacher Camera start err:", err);
+            showTeacherFallbackMessage();
+          });
+        } catch (err) {
+          console.error("Teacher Setup err:", err);
           showTeacherFallbackMessage();
-        });
-      } catch (err) {
-        showTeacherFallbackMessage();
-      }
+        }
+      }, 150);
     }
 
     function showTeacherFallbackMessage() {
       document.getElementById('teacher-scan-status').innerHTML = 
-        "<span class='text-amber-600 font-semibold'>ไม่สามารถเริ่มทำงานระบบกล้องได้<br>โปรดแตะเพื่อถ่ายรูปบันทึกแทน</span>";
+        "<span class='text-amber-600 font-semibold'>ไม่สามารถเรียกใช้งานแผงกล้องสดได้<br>คุณครูสามารถระบุบันทึกสิทธิ์โดยอัปโหลดไฟล์ภาพแทน</span>";
     }
 
     function closeTeacherQRScanner() {
@@ -585,7 +598,7 @@
     function scanTeacherQRFromFile(input) {
       if (input.files && input.files[0]) {
         const file = input.files[0];
-        document.getElementById('teacher-scan-status').innerText = "กำลังวิเคราะห์ไฟล์รูปภาพ...";
+        document.getElementById('teacher-scan-status').innerText = "กำลังดึงพิกเซลและถอดรหัสรูปภาพไฟล์...";
         
         const tempScanner = new Html5Qrcode("teacher-qr-reader");
         tempScanner.scanFile(file, true)
@@ -594,7 +607,7 @@
           })
           .catch(() => {
             Swal.fire('ตรวจจับล้มเหลว', 'ไม่พบ QR Code ในไฟล์รูปภาพ', 'error');
-            document.getElementById('teacher-scan-status').innerText = "ล้มเหลว: ภาพไม่ชัด";
+            document.getElementById('teacher-scan-status').innerText = "ล้มเหลว: ภาพไม่ชัดเจน";
           });
       }
     }
@@ -604,17 +617,17 @@
       const studentId = decodedText.trim();
       
       Swal.fire({
-        title: 'ครูประมวลผลกรณีไม่มาใช้สิทธิ์',
+        title: 'ครูบันทึกสถานะผู้ขาดเรียน',
         text: `รหัสประจำตัวนักเรียน: ${studentId}`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#E65100',
-        confirmButtonText: 'ระบุเหตุผลไม่มาใช้สิทธิ์ (ขาดเรียน)',
+        confirmButtonText: 'ระบุเหตุผลไม่มาลงสิทธิ์',
         cancelButtonText: 'ยกเลิก'
       }).then((result) => {
         if (result.isConfirmed) {
           Swal.fire({
-            title: 'ระบุเหตุผลในการไม่ใช้สิทธิ์',
+            title: 'ระบุสาเหตุการไม่เข้าเรียน/การลา',
             input: 'text',
             inputPlaceholder: 'ตัวอย่าง: ลาป่วย, ขาดเรียน, ไปกิจกรรมภายนอก',
             showCancelButton: true,
@@ -622,13 +635,13 @@
             cancelButtonText: 'ยกเลิก',
             preConfirm: (value) => {
               if (!value) {
-                Swal.showValidationMessage('กรุณาระบุรายละเอียดให้เรียบร้อย');
+                Swal.showValidationMessage('จำเป็นต้องกรอกรายละเอียดก่อนทำรายการ');
               }
               return value;
             }
           }).then((inputRes) => {
             if (inputRes.isConfirmed) {
-              Swal.fire({ title: 'กำลังปรับข้อมูล...', didOpen: () => { Swal.showLoading(); } });
+              Swal.fire({ title: 'กำลังปรับโครงสร้างฐานข้อมูล...', didOpen: () => { Swal.showLoading(); } });
               
               apiFetch(BACKEND_URL, {
                 method: 'POST',
@@ -640,7 +653,7 @@
               }).then(response => {
                 Swal.close();
                 if (response.success) {
-                  Swal.fire('ทำรายการสำเร็จ', `บันทึกข้อมูลของนักเรียนคนดังกล่าวเรียบร้อยแล้ว`, 'success');
+                  Swal.fire('ทำรายการสำเร็จ', `ปรับปรุงสถานะนักเรียนเรียบร้อยแล้ว`, 'success');
                   fetchDashboardData();
                 } else {
                   Swal.fire('ล้มเหลว', response.message, 'error');
@@ -653,11 +666,11 @@
     }
 
     function onTeacherScanFailure() {
-      // ข้าม Log รันสัญญาณแคม
+      // ข้าม Log เพื่อคงความสมูทในการสตรีมกล้อง
     }
 
 
-    // --- ส่วนจัดการลงคะแนนระบบ (Vote Submission System) ---
+    // --- ส่วนบริการข้อมูลพรรคและการโหวตคะแนนเสียง ---
 
     function openVotingInterface(user) {
       document.getElementById('user-info-name').innerText = user.name;
@@ -708,7 +721,7 @@
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#1E88E5',
-        confirmButtonText: 'ยืนยัน',
+        confirmButtonText: 'ยืนยันสิทธิ์',
         cancelButtonText: 'ยกเลิก'
       }).then((result) => {
         if (result.isConfirmed) {
@@ -718,7 +731,7 @@
     }
 
     function sendVoteToServer(candidateNo) {
-      Swal.fire({ title: 'กำลังส่งผลคะแนน...', didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({ title: 'กำลังประมวลผลคะแนนเสียง...', didOpen: () => { Swal.showLoading(); } });
       const info = window.navigator.userAgent.substring(0, 45);
 
       apiFetch(BACKEND_URL, {
@@ -732,7 +745,7 @@
       }).then(res => {
         Swal.close();
         if (res.success) {
-          Swal.fire('สำเร็จ', 'ขอบคุณที่มาร่วมใช้สิทธิ์เลือกตั้ง', 'success').then(() => {
+          Swal.fire('สำเร็จ', 'บันทึกคะแนนโหวตสำเร็จเรียบร้อยแล้ว', 'success').then(() => {
             logoutVotingSession();
             fetchDashboardData();
           });
@@ -748,7 +761,7 @@
     }
 
     function generateAndPrintQRCodes() {
-      Swal.fire({ title: 'กำลังสแกนรายชื่อเพื่อจัดพิมพ์...', didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({ title: 'กำลังดึงฐานข้อมูลจัดทำแผ่นพิมพ์...', didOpen: () => { Swal.showLoading(); } });
       
       apiFetch(`${BACKEND_URL}?action=getStudentsList`)
         .then(students => {
@@ -885,21 +898,21 @@
 
     function resetSystemPrompt() {
       Swal.fire({
-        title: 'ยืนยันการล้างข้อมูลของผลเลือกตั้งรอบนี้?',
-        text: "การยืนยันข้อมูลจะทำประวัติการแสกนทั้งหมดถูกล้างกลับไปเป็น Pending สำหรับการใช้งานครั้งถัดไป",
+        title: 'ยืนยันเคลียร์ฐานประวัติเดิม?',
+        text: "เมื่อรีเซ็ต คะแนนเสียงและประวัติทั้งหมดจะถูกล้างค่าเริ่มใหม่ทั้งหมด",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        confirmButtonText: 'รีเซ็ตระบบ'
+        confirmButtonText: 'ล้างข้อมูลทั้งหมด'
       }).then((result) => {
         if (result.isConfirmed) {
-          Swal.fire({ title: 'กำลังรีเซ็ต...', didOpen: () => { Swal.showLoading(); } });
+          Swal.fire({ title: 'กำลังติดต่อระบบหลังบ้านเพื่อล้างข้อมูล...', didOpen: () => { Swal.showLoading(); } });
           apiFetch(BACKEND_URL, {
             method: 'POST',
             body: JSON.stringify({ action: "resetVotes" })
           }).then(() => {
             Swal.close();
-            Swal.fire('รีเซ็ตสำเร็จ', 'ประวัติได้รับการล้างค่าเรียบร้อย', 'success').then(() => {
+            Swal.fire('เสร็จสิ้น', 'รีเซ็ตฐานข้อมูลพร้อมจัดสรรงานใหม่', 'success').then(() => {
               fetchDashboardData();
             });
           });
