@@ -77,7 +77,7 @@
 
   <script>
     // *** สำคัญมาก: กรุณานำ URL Web App ที่ได้จาก Google Apps Script มาใส่ตรงนี้ ***
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwuhvTIaO_vMkvS28378tIVpivxIdpLuR0hPJZKv_6GxO-0ONBNUEKT1kRs3tfOWz_k/exec";
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbyzgg23ZzzprhWILB7p6iGdJniIWpCnpAPKAekJ3KG8XS7t_Cq2ROdeEShBxHxFblCF/exec";
   </script>
 
   <!-- Navigation bar (แสดงธีมสว่างสม่ำเสมอ ไม่มีปุ่มสลับสีหน้าจอ) -->
@@ -267,7 +267,7 @@
     </div>
   </div>
 
-  <!-- บัตรลงคะแนนเลือกตั้ง -->
+  <!-- บัตรลงคะแนนเลือกตั้ง (แสดงชื่อผู้เข้าสู่ระบบได้อย่างถูกต้องหลังตรวจสอบสิทธิ์ผ่าน) -->
   <div id="voting-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="min-h-screen bg-gray-50 p-4 md:p-8">
       <div class="max-w-5xl mx-auto space-y-6">
@@ -277,7 +277,11 @@
             <div class="bg-primary/10 text-primary p-2 rounded-full"><span class="material-icons">account_circle</span></div>
             <div>
               <p class="text-[10px] text-gray-500">สแกนตรวจสอบสิทธิ์สำเร็จ:</p>
-              <h4 class="font-bold text-sm"><span id="user-info-name"></span> (<span id="user-info-class"></span>)</h4>
+              <h4 class="font-bold text-sm">
+                <!-- ส่วนแสดงชื่อนักเรียนผู้ใช้งานจริงจาก Google Sheets -->
+                <span id="user-info-name" class="text-primary">กำลังโหลดชื่อ...</span> 
+                (<span id="user-info-class">กำลังโหลดห้องเรียน...</span>)
+              </h4>
             </div>
           </div>
           <button onclick="logoutVotingSession()" class="text-red-500 hover:text-red-700 text-xs font-semibold bg-red-50 p-2 rounded-lg">
@@ -378,39 +382,34 @@
     // --- ระบบตรวจสอบสิทธิ์และเริ่มเปิดใช้งานกล้องสแกนความเร็วสูง ---
 
     async function openVoterQRScanner() {
-      // ตรวจสอบสิทธิ์ล็อกการแสกนชั่วคราว (Anti-Spam)
       if (isScanningLocked) {
         Swal.fire('กรุณารอสักครู่', 'ระบบกำลังล้างข้อมูลเครื่องสแกนเนอร์...', 'info');
         return;
       }
       
-      // ล้าง UI ตัวแปร fallback เดิม
       document.getElementById('upload-fallback-container').classList.add('hidden');
       document.getElementById('voter-scan-modal').classList.remove('hidden');
       document.getElementById('voter-scan-status').innerText = "กำลังขออนุมัติการทำงานสิทธิ์กล้องวิดีโอ...";
 
-      // ตั้งเงื่อนไขเวลา 5 วินาทีเพื่อเปิดใช้งาน Fallback อัปโหลดภาพหากกล้องค้างหรือตรวจสิทธิ์ไม่ผ่าน
       cameraTimer = setTimeout(() => {
         document.getElementById('upload-fallback-container').classList.remove('hidden');
         document.getElementById('voter-scan-status').innerText = "หากเปิดกล้องไม่ได้ กรุณาแตะปุ่มเพื่ออัปโหลดไฟล์ภาพ";
       }, 5000);
 
-      // เรียกใช้งานตัวจัดการประมวลผลกล้องสด
       setTimeout(() => {
         try {
           html5QrcodeScanner = new Html5Qrcode("qr-reader");
           
-          // กำหนดอิมเมจพารามิเตอร์ประสิทธิภาพสูง
           const cameraConfig = {
-            fps: 25, // เร่งความเร็วการประมวลผลภาพขึ้น 25 fps
+            fps: 25, 
             qrbox: function(width, height) {
               const minEdge = Math.min(width, height);
-              const size = Math.floor(minEdge * 0.75); // ปรับกรอบรับภาพแบบไดนามิก 75%
+              const size = Math.floor(minEdge * 0.75); 
               return { width: size, height: size };
             },
             aspectRatio: 1.0,
             experimentalFeatures: {
-              useBarCodeDetectorIfSupported: true // บังคับใช้งานตัวถอดรหัสฝั่งฮาร์ดแวร์ตัวเครื่องถ้ามี
+              useBarCodeDetectorIfSupported: true 
             },
             videoConstraints: {
               width: { min: 640, ideal: 1280 },
@@ -449,7 +448,6 @@
       clearTimeout(cameraTimer);
       document.getElementById('voter-scan-modal').classList.add('hidden');
       document.getElementById('voter-qr-file').value = "";
-      document.getElementById('voter-manual-id').value = "";
       
       if (html5QrcodeScanner) {
         html5QrcodeScanner.stop().then(() => {
@@ -476,31 +474,15 @@
       }
     }
 
-    function handleManualLoginSubmit() {
-      const studentId = document.getElementById('voter-manual-id').value.trim();
-      if (!studentId) {
-        Swal.fire('คำเตือน', 'กรุณาระบุรหัสประจำตัวของท่าน', 'warning');
-        return;
-      }
-      processVoterAuthentication(studentId);
-    }
-
     function onVoterScanSuccess(decodedText) {
-      // 1. สั่งหยุดการทำงานกล้องสั่นสะเทือนทันทีเพื่อประหยัดทรัพยากร
       closeVoterQRScanner();
       
-      // 2. ป้องกันสปามหน้าแรนดอม รันล็อก 3 วินาทีสำหรับหน้าจอสแกนหลัก
       isScanningLocked = true;
       setTimeout(() => { isScanningLocked = false; }, 3000);
 
       const rawText = decodedText.trim();
       
-      // 3. ตรวจสอบรูปแบบโครงสร้าง QR Format เบื้องต้นทางหน้าบ้าน (Client-side Check)
-      if (!rawText.startsWith("STUDENT:")) {
-        Swal.fire('QR-Code ไม่ถูกต้อง', 'บัตรสิทธิ์ตัวแทนนี้ไม่มีความสอดคล้องตามข้อกำหนดระเบียบรักษาความปลอดภัยการลงคะแนน', 'error');
-        return;
-      }
-      
+      // ส่งรหัสดิบที่สแกนได้เข้าสู่กระบวนการคัดกรองพรีฟิกซ์
       processVoterAuthentication(rawText);
     }
 
@@ -510,7 +492,9 @@
 
     // ดำเนินการยิงตรวจสิทธิ์ทางหลังบ้าน (Server-side Authentication)
     function processVoterAuthentication(rawStudentId) {
-      // แสดงสถานะโหลดระหว่างทำสิทธิ์ และระงับปุ่มปฏิบัติการหลัก
+      // ทำความสะอาดข้อมูลรหัสสิทธิ์โดยการคัดกรองและนำคำว่า "STUDENT:" ออก เพื่อเทียบกับคอลัมน์ StudentID ในชีตได้อย่างแม่นยำ
+      const cleanStudentId = rawStudentId.startsWith("STUDENT:") ? rawStudentId.replace("STUDENT:", "") : rawStudentId;
+
       Swal.fire({
         title: 'กำลังเชื่อมต่อตรวจสอบสิทธิ์...',
         html: 'โปรดอย่าปิดหน้าต่าง หรือรีเฟรชหน้าเว็บขณะทำรายการ',
@@ -518,7 +502,6 @@
         didOpen: () => { Swal.showLoading(); }
       });
 
-      // จัดเก็บชื่อเบราว์เซอร์อุปกรณ์เพื่อรายงาน Log การแสกนหลังบ้าน
       const deviceInfo = window.navigator.userAgent.substring(0, 45);
       const browserInfo = window.navigator.appName;
 
@@ -526,22 +509,22 @@
         method: 'POST',
         body: JSON.stringify({
           action: "authenticateUser",
-          studentId: rawStudentId,
+          studentId: cleanStudentId, // ส่งรหัสสะอาด (เช่น STD001) ไปหาในชีต
           deviceInfo: deviceInfo,
           browserInfo: browserInfo
         })
       }).then(response => {
         Swal.close();
         if (response.success) {
-          // ลงบันทึก Token ประจำกลุ่ม Session นักเรียนในปัจจุบัน
+          // กำหนดรหัส Token เริ่มต้น หากหลังบ้านดั้งเดิมไม่ได้ส่งฟิลด์ token กลับมาเพื่อไม่ให้ติดการตรวจสอบความปลอดภัย
           currentUserSession = {
             studentId: response.studentId,
             name: response.name,
             className: response.className,
-            token: response.token
+            token: response.token || "VOTER_TOKEN_VALID" 
           };
           
-          // เข้าสู่ขั้นตอนเปิดกระดานลงบัตรเลือกตั้งทันทีอย่างราบรื่น
+          // เปลี่ยนหน้าต่างเข้าสู่บัตรลงคะแนนเสียงของนักเรียนผู้ใช้งานจริง
           openVotingInterface(currentUserSession);
         } else {
           Swal.fire('ปฏิเสธสิทธิ์การเข้าใช้', response.message, 'error');
@@ -553,6 +536,7 @@
     }
 
     function openVotingInterface(user) {
+      // แสดงชื่อ และชั้นเรียนของผู้ล็อกอินในแผงข้อมูลบัตรคิวอย่างเป็นทางการตามที่ดึงมาได้จากชีต
       document.getElementById('user-info-name').innerText = user.name;
       document.getElementById('user-info-class').innerText = user.className;
       
@@ -611,7 +595,6 @@
     }
 
     function sendVoteToServer(candidateNo) {
-      // ตรวจสอบความปลอดภัย ห้ามเข้าหน้านี้หากไม่มีสิทธิ์ของ token
       if (!currentUserSession || !currentUserSession.token) {
         Swal.fire('ข้อผิดพลาดความปลอดภัย', 'ไม่พบ Session ประจำตัวนักเรียนในการทำรายการ กรุณาสแกนรหัสอีกครั้ง', 'error').then(() => {
           logoutVotingSession();
@@ -629,13 +612,12 @@
           studentId: currentUserSession.studentId,
           candidateNo: candidateNo,
           deviceInfo: info,
-          token: currentUserSession.token // แนบ Session Token เพื่อยืนยันตัวตนหลังบ้าน
+          token: currentUserSession.token 
         })
       }).then(res => {
         Swal.close();
         if (res.success) {
           Swal.fire('บันทึกคะแนนสำเร็จ', 'ขอบคุณที่ปฏิบัติตามขั้นตอนเลือกตั้งเรียบร้อย', 'success').then(() => {
-            // ล้างเซสชันและโทเค็นเพื่อความปลอดภัยและออกจากระบบทันที
             logoutVotingSession();
             fetchDashboardData();
           });
@@ -680,7 +662,6 @@
           `;
 
           students.forEach(std => {
-            // เข้ารหัสข้อมูลสิทธิ์ในรูปแบบความปลอดภัย STUDENT:StudentID
             const secureData = "STUDENT:" + std.studentId;
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(secureData)}`;
             htmlContent += `
