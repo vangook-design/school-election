@@ -51,7 +51,7 @@
     const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxElUzNovvUtBF_ZVecnz-gPaBB2RDji5IN6VKyU-d8qoQW45PJQvnD4WA2P-jU3Bp3/exec";
   </script>
 
-  <!-- Navigation bar -->
+  <!-- Navigation bar (เอาปุ่มแสกนสำหรับครูออก) -->
   <header class="sticky top-0 z-40 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-b border-gray-100 dark:border-gray-700 py-3 px-4 shadow-sm">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center space-x-3">
@@ -65,10 +65,6 @@
       </div>
       
       <div class="flex items-center space-x-3">
-        <button onclick="openQRScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center space-x-1 shadow-sm transition">
-          <span class="material-icons text-sm">qr_code_scanner</span>
-          <span>สแกน QR-Code (สำหรับครู)</span>
-        </button>
         <button onclick="toggleDarkMode()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition">
           <span id="dark-mode-icon" class="material-icons text-sm block">dark_mode</span>
         </button>
@@ -118,8 +114,8 @@
       </div>
     </div>
 
-    <!-- ปุ่มสำหรับกดเข้าสู่การใช้สิทธิ์ของนักเรียน -->
-    <div id="action-panel" class="bg-white dark:bg-gray-800 border-2 border-primary/20 rounded-3xl p-10 text-center max-w-2xl mx-auto custom-shadow relative overflow-hidden my-8">
+    <!-- ปุ่มสำหรับเข้าสู่การใช้สิทธิ์แบบแสกน QR-Code ของนักเรียน และ แบบกรอกรหัส -->
+    <div id="action-panel" class="bg-white dark:bg-gray-800 border-2 border-primary/20 rounded-3xl p-8 text-center max-w-2xl mx-auto custom-shadow relative overflow-hidden my-8">
       <div class="absolute -top-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
       <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
 
@@ -128,14 +124,23 @@
           ลงคะแนนเสียงประธานนักเรียนออนไลน์
         </h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-          โปรดตรวจสอบความพร้อมและยืนยันรหัสประจำตัวของท่านผ่านทางบัตรคิวสิทธิ์เพื่อดำเนินการลงคะแนนเสียง
+          กรุณาแสกน QR Code บัตรประจำตัวนักเรียนของท่าน หรือกรอกรหัสเพื่อเข้าสู่ระบบลงคะแนนเสียง
         </p>
         
-        <div class="pt-4 pb-2">
-          <button onclick="openLoginModal()" class="voting-btn-glow relative inline-flex items-center justify-center p-0.5 mb-2 overflow-hidden text-lg font-bold text-white rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 transform hover:scale-[1.05] transition-all duration-300 shadow-2xl shadow-blue-500/40">
-            <span class="relative px-12 py-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center space-x-3 text-xl md:text-2xl">
-              <span class="material-icons text-2xl md:text-3xl">how_to_vote</span>
-              <span>กดเพื่อเข้าสู่ระบบลงคะแนน</span>
+        <div class="pt-4 pb-2 flex flex-col sm:flex-row justify-center items-center gap-4">
+          <!-- ปุ่มหลัก: ใช้ระบบแสกน QR-Code ในการล็อกอินเข้าสิทธิ์ -->
+          <button onclick="openQRScanner()" class="voting-btn-glow relative inline-flex items-center justify-center p-0.5 overflow-hidden text-base font-bold text-white rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-emerald-300 dark:focus:ring-emerald-800 transform hover:scale-[1.03] transition-all duration-300 shadow-xl shadow-emerald-500/30 w-full sm:w-auto">
+            <span class="relative px-8 py-5 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl flex items-center justify-center space-x-2 text-lg">
+              <span class="material-icons text-xl md:text-2xl">qr_code_scanner</span>
+              <span>สแกน QR-Code เข้าสู่ระบบ</span>
+            </span>
+          </button>
+
+          <!-- ปุ่มสำรอง: กรอกรหัสประจำตัวทางคีย์บอร์ด -->
+          <button onclick="openLoginModal()" class="relative inline-flex items-center justify-center p-0.5 overflow-hidden text-base font-bold text-gray-700 dark:text-gray-200 rounded-2xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transform hover:scale-[1.03] transition-all duration-300 shadow-md w-full sm:w-auto">
+            <span class="relative px-8 py-5 flex items-center justify-center space-x-2 text-lg">
+              <span class="material-icons text-xl md:text-2xl">keyboard</span>
+              <span>กรอกรหัสประจำตัว</span>
             </span>
           </button>
         </div>
@@ -206,21 +211,21 @@
 
   </main>
 
-  <!-- Modal สำหรับสแกน QR-Code ด้วยกล้องถ่ายรูปมือถือ/แท็บเล็ต -->
+  <!-- Modal สำหรับสแกน QR-Code ของนักเรียน (ใช้ตัวอ่านกล้องและอัปโหลดของเดิม) -->
   <div id="qr-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/80 backdrop-blur-sm">
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full custom-shadow border border-gray-100 relative">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-base font-bold flex items-center text-emerald-600">
             <span class="material-icons mr-1">qr_code_scanner</span>
-            สแกนตรวจสอบสิทธิ์ (Safari & Chrome)
+            สแกน QR-Code เพื่อเข้าสู่ระบบ
           </h2>
           <button onclick="closeQRScanner()" class="text-gray-400 hover:text-gray-600">
             <span class="material-icons">close</span>
           </button>
         </div>
         
-        <p class="text-xs text-gray-500 mb-4">ระบบรองรับการเปิดกล้อง หากไม่สามารถเข้าถึงกล้องได้ ให้กดเลือกเมนูอัปโหลดภาพแทน</p>
+        <p class="text-xs text-gray-500 mb-4">โปรดถือบัตรสิทธิ์ QR-Code หน้ากล้อง หรือทำการอัปโหลดรูปภาพสิทธิ์เพื่อยืนยันตัวตน</p>
         
         <!-- ขอบเขตแสดงกล้องวิดีโอ -->
         <div class="overflow-hidden rounded-2xl bg-black aspect-square max-w-xs mx-auto mb-4 border-2 border-primary relative">
@@ -243,7 +248,7 @@
     </div>
   </div>
 
-  <!-- Modal สำหรับตรวจสอบสิทธิ์นักเรียน -->
+  <!-- Modal สำหรับตรวจสอบสิทธิ์นักเรียนแบบพิมพ์รหัส -->
   <div id="login-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen p-4 bg-gray-950/60 backdrop-blur-sm">
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full border border-gray-100">
@@ -327,7 +332,6 @@
       document.documentElement.classList.add('dark');
     }
 
-    // ฟังก์ชันสื่อสารด้วยการ Fetch ไปยังหลังบ้าน (แทน google.script.run)
     async function apiFetch(url, params = {}) {
       try {
         const response = await fetch(url, params);
@@ -338,7 +342,6 @@
       }
     }
 
-    // ดึงข้อมูลหลักจากหลังบ้านมาประมวลผล
     function fetchDashboardData() {
       apiFetch(`${BACKEND_URL}?action=getDashboardData`)
         .then(data => {
@@ -395,15 +398,14 @@
       }
     }
 
-    // เปิดระบบสแกน QR Code พร้อมตรวจสอบ Permission
+    // เปิดระบบสแกน QR Code สำหรับเข้าสู่ระบบของนักเรียนทุกคน
     async function openQRScanner() {
       document.getElementById('qr-modal').classList.remove('hidden');
       document.getElementById('qr-scan-result').innerText = "กำลังสแกนกล้องสด...";
       
       try {
-        // ตรวจสอบสิทธิ์การเข้าใช้งานกล้อง (Camera Permission check)
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop()); // ปิดสตรีมทดสอบเพื่อคืนทรัพยากรระบบ
+        stream.getTracks().forEach(track => track.stop());
 
         html5QrcodeScanner = new Html5Qrcode("qr-reader");
         html5QrcodeScanner.start(
@@ -434,7 +436,6 @@
       }
     }
 
-    // การแสกนผ่านการนำเข้ารูปภาพ (Fallback)
     function scanFromUploadedFile(input) {
       if (input.files && input.files[0]) {
         const file = input.files[0];
@@ -452,64 +453,39 @@
       }
     }
 
+    // เมื่อสแกน QR-Code สำเร็จ จะสลับไปเข้าระบบของนักเรียนรายบุคคลโดยอัตโนมัติ
     function onScanSuccess(decodedText, decodedResult) {
       closeQRScanner();
       const studentId = decodedText.trim();
       
-      Swal.fire({
-        title: 'ระบบตรวจสอบข้อมูลสิทธิ์',
-        text: `รหัสประจำตัวที่ตรวจพบ: ${studentId}`,
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#1E88E5',
-        confirmButtonText: 'บันทึก: ไม่มาใช้สิทธิ์ (ขาดเรียน)',
-        cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          Swal.fire({
-            title: 'ระบุสาเหตุการขาดเรียน',
-            input: 'text',
-            inputPlaceholder: 'ตัวอย่าง: ลาป่วย, ขาดเรียน, ไปกิจกรรมภายนอก',
-            showCancelButton: true,
-            confirmButtonText: 'ยืนยันการบันทึก',
-            cancelButtonText: 'ยกเลิก',
-            preConfirm: (value) => {
-              if (!value) {
-                Swal.showValidationMessage('จำเป็นต้องใส่ข้อมูลรายละเอียดเพื่อลงบันทึก');
-              }
-              return value;
-            }
-          }).then((inputRes) => {
-            if (inputRes.isConfirmed) {
-              Swal.fire({ title: 'กำลังบันทึกข้อมูล...', didOpen: () => { Swal.showLoading(); } });
-              
-              apiFetch(BACKEND_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                  action: "markAbsent",
-                  studentId: studentId,
-                  reason: inputRes.value
-                })
-              }).then(response => {
-                Swal.close();
-                if (response.success) {
-                  Swal.fire('บันทึกสำเร็จ', `ปรับปรุงสถานะของนักเรียนเรียบร้อยแล้ว`, 'success');
-                  fetchDashboardData();
-                } else {
-                  Swal.fire('ล้มเหลว', response.message, 'error');
-                }
-              }).catch(err => {
-                Swal.close();
-                Swal.fire('ระบบขัดข้อง', 'ไม่สามารถเชื่อมต่อเครือข่ายได้', 'error');
-              });
-            }
-          });
+      Swal.fire({ title: 'กำลังตรวจสอบข้อมูลสิทธิ์และตัวตน...', didOpen: () => { Swal.showLoading(); } });
+
+      apiFetch(BACKEND_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: "authenticateUser",
+          studentId: studentId
+        })
+      }).then(response => {
+        Swal.close();
+        if (response.success) {
+          if (response.hasVoted) {
+            Swal.fire('ทำรายการโหวตแล้ว', 'รหัสสิทธิ์ประจำตัวนี้ทำรายการโหวตไปเรียบร้อยแล้ว', 'warning');
+          } else {
+            currentUserSession = response;
+            openVotingInterface(response);
+          }
+        } else {
+          Swal.fire('สิทธิ์ไม่ถูกต้อง', response.message, 'error');
         }
+      }).catch(() => {
+        Swal.close();
+        Swal.fire('ล้มเหลว', 'การลงทะเบียนสิทธิ์ผ่านเครือข่ายขัดข้อง', 'error');
       });
     }
 
     function onScanFailure(error) {
-      // ข้าม Log เพื่อไม่ให้ขัดจังหวะภาพวิดีโอ
+      // ปิดส่วนแจ้งเตือน log การสแกนพลาดชั่วคราวเพื่อลดโหลดเบราว์เซอร์
     }
 
     function generateAndPrintQRCodes() {
